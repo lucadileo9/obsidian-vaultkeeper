@@ -1,0 +1,37 @@
+# VaultKeeper Reference Configuration (vault.toml)
+# Place this file in the root of your Vault or ~/.config/vaultkeeper/config.toml
+
+[vault]
+root_path = "/srv/storage/Vault"
+allowed_extensions = [".md", ".pdf", ".png", ".jpg", ".jpeg", ".svg", ".docx", ".xlsx", ".pptx"]
+ignored_folders = [".obsidian", ".trash", ".git", ".stversions", ".deleted", "node_modules", ".venv"]
+max_path_length = 240
+
+[naming]
+style = "Title_Case"                         # "Title_Case", "kebab-case", "snake_case", "none"
+disallowed_chars = "[\'\\":?*!&|<>,\\\\\\\\()]"
+acronyms = ["AI", "API", "AWS", "BCG", "CRM", "HPC", "IT", "JEMORE", "MECE", "SQL", "UX", "MOC", "PKM"]
+preserve_prefix_pattern = "^[0-9]{2}(-[0-9]{2})?_"
+
+[frontmatter]
+type_field = "tipo"
+allowed_types = ["Appunto", "Contatto", "Progetto", "Risorsa", "Indice", "Sistema"]
+required_fields = ["tipo", "tags"]
+
+[tags]
+taxonomy_file = "00_Tassonomia_Tag.md"
+strict_taxonomy = true
+protect_c_directives = true
+protect_hex_colors = true
+tag_replacements = { "appunti" = "tipo/appunto", "risorse" = "tipo/risorsa", "progetti" = "tipo/progetto" }
+
+[attachments]
+folder_names = ["_attachments", "attachments", "assets", "Slide", "media"]
+heavy_file_threshold_mb = 50
+trash_folder = ".trash"
+
+[indices]
+naming_pattern = "contextual"                # "contextual" (00_Indice_<folder>.md), "static" (00_Indice.md), "readme" (README.md)
+prefix = "00_"
+summary_max_chars = 250
+include_non_md = true
