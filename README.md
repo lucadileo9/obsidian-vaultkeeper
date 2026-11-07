@@ -36,6 +36,20 @@ pip install -e ".[dev]"
 
 ---
 
+## Indice della Documentazione
+
+La documentazione esaustiva e' organizzata nella cartella `docs/`:
+
+- [**Prontuario Operativo Rapido (`docs/quickstart.md`)**](docs/quickstart.md): Guida all'installazione, primi passi e routine quotidiane.
+- [**Manuale di Governance e Remediation (`docs/governance.md`)**](docs/governance.md): Diagnostica a 5 fasi, calcolo Health Score e protocollo di bonifica.
+- [**Architettura e Modelli (`docs/architecture.md`)**](docs/architecture.md): Principi di progettazione, modelli di dominio e risoluzione O(1).
+- [**Specifiche di Configurazione (`docs/configuration.md`)**](docs/configuration.md): Schema dettagliato del file `vault.toml` e scenari SharePoint/Drive.
+- [**Riferimento Completo della CLI (`docs/cli-reference.md`)**](docs/cli-reference.md): Manuale di tutti i comandi `vk`, opzioni ed exit code.
+- [**Core API Python & MCP Server (`docs/python-api.md`)**](docs/python-api.md): Utilizzo programmatico della classe `Vault` ed esposizione per agenti AI.
+- [**Protocollo di Test e Qualita' (`docs/testing.md`)**](docs/testing.md): Struttura dei 53 test pytest, coverage e test di ciclo di vita E2E.
+
+---
+
 ## Utilizzo da Riga di Comando (`vk`)
 
 La CLI espone comandi autoesplicativi, flag per simulazione non distruttiva (`--dry-run`), formattazione log su file (`--log-file`) e codici di uscita semantici POSIX (`0` = Successo, `1` = Errore, `2` = Rilevate criticita'/link rotti):
