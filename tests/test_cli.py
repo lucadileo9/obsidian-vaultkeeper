@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from vaultkeeper.cli.logging import setup_cli_logger
+from vaultkeeper.cli.logging import close_cli_logger, setup_cli_logger
 from vaultkeeper.cli.main import main
 
 
@@ -194,6 +194,9 @@ def test_cli_logging_file(empty_temp_dir: Path) -> None:
     """Verify setup_cli_logger writes to file cleanly."""
     log_path = empty_temp_dir / "test_run.log"
     logger = setup_cli_logger(name="test_logger", verbose=True, log_file=log_path)
-    logger.info("Message for file logging")
-    assert log_path.is_file()
-    assert "Message for file logging" in log_path.read_text(encoding="utf-8")
+    try:
+        logger.info("Message for file logging")
+        assert log_path.is_file()
+        assert "Message for file logging" in log_path.read_text(encoding="utf-8")
+    finally:
+        close_cli_logger(logger)

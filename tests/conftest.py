@@ -12,8 +12,14 @@ from vaultkeeper.config import generate_default_config_content
 @pytest.fixture
 def empty_temp_dir() -> Generator[Path, None, None]:
     """Provide a temporary directory and automatically cleanup after test."""
-    with tempfile.TemporaryDirectory() as tmpdir:
-        yield Path(tmpdir).resolve()
+    td = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
+    try:
+        yield Path(td.name).resolve()
+    finally:
+        import logging
+
+        logging.shutdown()
+        td.cleanup()
 
 
 @pytest.fixture

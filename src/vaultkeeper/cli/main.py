@@ -13,7 +13,7 @@ from .commands.indices import handle_indices
 from .commands.init import handle_init
 from .commands.links import handle_links
 from .commands.naming import handle_naming
-from .logging import setup_cli_logger
+from .logging import close_cli_logger, setup_cli_logger
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -151,31 +151,34 @@ def main(argv: Optional[List[str]] = None) -> int:
         log_file=args.log_file,
     )
 
-    if not args.command:
+    try:
+        if not args.command:
+            parser.print_help()
+            return 0
+
+        command_handlers = {
+            "init": handle_init,
+            "audit": handle_audit,
+            "check-links": handle_links,
+            "clean-attachments": handle_attachments,
+            "normalize-names": handle_naming,
+            "generate-indices": handle_indices,
+            "frontmatter": handle_frontmatter,
+            "disambiguate": handle_disambiguate,
+        }
+
+        handler = command_handlers.get(args.command)
+        if handler:
+            try:
+                return handler(args, logger)
+            except Exception as exc:
+                logger.error("Command execution failed: %s", exc)
+                return 1
+
         parser.print_help()
         return 0
-
-    command_handlers = {
-        "init": handle_init,
-        "audit": handle_audit,
-        "check-links": handle_links,
-        "clean-attachments": handle_attachments,
-        "normalize-names": handle_naming,
-        "generate-indices": handle_indices,
-        "frontmatter": handle_frontmatter,
-        "disambiguate": handle_disambiguate,
-    }
-
-    handler = command_handlers.get(args.command)
-    if handler:
-        try:
-            return handler(args, logger)
-        except Exception as exc:
-            logger.error("Command execution failed: %s", exc)
-            return 1
-
-    parser.print_help()
-    return 0
+    finally:
+        close_cli_logger(logger)
 
 
 if __name__ == "__main__":

@@ -55,6 +55,12 @@ def setup_cli_logger(
 ) -> logging.Logger:
     """Configure and return a standardized CLI logger with colored console output."""
     logger = logging.getLogger(name)
+    for handler in list(logger.handlers):
+        try:
+            handler.flush()
+            handler.close()
+        except Exception:
+            pass
     logger.handlers.clear()
     logger.propagate = False
 
@@ -88,3 +94,15 @@ def setup_cli_logger(
         logger.addHandler(file_handler)
 
     return logger
+
+
+def close_cli_logger(logger: Optional[logging.Logger] = None) -> None:
+    """Close and flush all handlers attached to the logger."""
+    target = logger or logging.getLogger("vaultkeeper")
+    for handler in list(target.handlers):
+        try:
+            handler.flush()
+            handler.close()
+        except Exception:
+            pass
+        target.removeHandler(handler)
