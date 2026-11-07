@@ -47,3 +47,21 @@ def test_write_folder_index(mock_vault: Path) -> None:
     # Second write with no changes returns False
     _, created_again = write_folder_index(target, cfg, catalog, dry_run=False)
     assert created_again is False
+
+
+def test_folder_index_with_subfolders_and_summary(mock_vault: Path) -> None:
+    """Verify index generation includes subfolders and frontmatter description summary."""
+    cfg = load_vault_config(root_path=mock_vault)
+    sub = mock_vault / "10-19_Progetti" / "Sub_Progetto"
+    sub.mkdir()
+    note_sub = sub / "Dettaglio.md"
+    note_sub.write_text(
+        "---\ntipo: Appunto\ndescrizione: Sintesi del sotto progetto di prova.\n---\n# Dettaglio\n",
+        encoding="utf-8",
+    )
+
+    catalog = build_vault_catalog(cfg)
+    idx_sub, _ = write_folder_index(sub, cfg, catalog)
+    assert idx_sub.is_file()
+    content_sub = idx_sub.read_text(encoding="utf-8")
+    assert "Sintesi del sotto progetto di prova" in content_sub

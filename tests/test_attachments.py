@@ -54,3 +54,30 @@ def test_hard_delete_attachment(mock_vault: Path) -> None:
     assert orphan.exists()
     hard_delete_attachment(orphan)
     assert not orphan.exists()
+
+
+def test_attachment_collision_and_errors(mock_vault: Path) -> None:
+    """Verify soft delete collision handling and error cases."""
+    orphan = mock_vault / "90-99_Allegati" / "Orphan_Image.png"
+
+    # Pre-create a file in .trash to trigger collision logic
+    trash_target = mock_vault / ".trash" / "90-99_Allegati" / "Orphan_Image.png"
+    trash_target.parent.mkdir(parents=True, exist_ok=True)
+    trash_target.write_bytes(b"existing in trash")
+
+    # Soft delete should succeed by appending timestamp
+    dest = soft_delete_attachment(orphan, mock_vault, trash_folder_name=".trash")
+    assert dest.is_file()
+    assert dest != trash_target
+
+    # Non-existent file error
+    import pytest
+
+    from vaultkeeper.exceptions import AttachmentError
+
+    fake_file = mock_vault / "nonexistent.png"
+    with pytest.raises(AttachmentError):
+        soft_delete_attachment(fake_file, mock_vault)
+
+    with pytest.raises(AttachmentError):
+        hard_delete_attachment(fake_file)

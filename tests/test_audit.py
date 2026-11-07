@@ -42,3 +42,21 @@ def test_compute_health_score_deductions() -> None:
     score = compute_health_score(phases)
     # 100 - (2 * 3.0) = 94.0
     assert score == 94.0
+
+
+def test_audit_edge_cases(mock_vault: Path) -> None:
+    """Verify audit detecting long path, invalid types, and unregistered tags."""
+    cfg = load_vault_config(root_path=mock_vault)
+    cfg.max_path_length = 20  # Force long path issue
+
+    # Note with invalid tipo and unregistered tag
+    bad_note = mock_vault / "10-19_Progetti" / "Bad_Metadata_Note.md"
+    bad_note.write_text(
+        "---\ntipo: InvalidType\ntags:\n  - tag/non_censito\n---\n# Bad Note\n",
+        encoding="utf-8",
+    )
+
+    report = run_audit(cfg)
+    assert any("Path length" in iss for iss in report.phases[0].issues)
+    assert any("Invalid tipo" in iss for iss in report.phases[2].issues)
+    assert any("Unregistered tag" in iss for iss in report.phases[3].issues)

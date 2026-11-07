@@ -3,6 +3,7 @@
 > Universal Second Brain governance engine, link validator and maintenance toolkit for Obsidian and document vaults.
 
 [![CI](https://github.com/lucadileo9/obsidian-vaultkeeper/actions/workflows/ci.yml/badge.svg)](https://github.com/lucadileo9/obsidian-vaultkeeper/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/lucadileo9/obsidian-vaultkeeper/branch/main/graph/badge.svg)](https://codecov.io/gh/lucadileo9/obsidian-vaultkeeper)
 [![Python](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.13%20%7C%203.14-blue.svg)]()
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 

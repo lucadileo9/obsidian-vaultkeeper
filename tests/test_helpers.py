@@ -27,3 +27,13 @@ def test_compute_file_hash(empty_temp_dir: Path) -> None:
     h = compute_file_hash(f)
     assert len(h) == 64
     assert isinstance(h, str)
+
+
+def test_is_ignored_path() -> None:
+    """Verify ignored path filter."""
+    from vaultkeeper.core.traversal import is_ignored_path
+
+    ignored = {".obsidian", ".trash", "node_modules"}
+    assert is_ignored_path(Path("/vault/.obsidian/plugins"), ignored) is True
+    assert is_ignored_path(Path("/vault/10-19_Progetti/Note.md"), ignored) is False
+    assert is_ignored_path(Path("/vault/.hidden_folder"), ignored) is True

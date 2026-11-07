@@ -84,3 +84,29 @@ def test_rename_vault_item(mock_vault: Path) -> None:
     # Verify Progetto_Alpha was updated
     p1 = (mock_vault / "10-19_Progetti" / "Progetto_Alpha.md").read_text(encoding="utf-8")
     assert "[[Nota_Beta_Aggiornata]]" in p1
+
+
+def test_rename_errors_and_same_name(mock_vault: Path) -> None:
+    """Verify rename edge cases: target not found, same destination, and collision."""
+    import pytest
+
+    from vaultkeeper.exceptions import NamingError
+
+    cfg = load_vault_config(root_path=mock_vault)
+    catalog = build_vault_catalog(cfg)
+    target = mock_vault / "10-19_Progetti" / "Progetto_Alpha.md"
+
+    # Same name returns same path with 0 updated links
+    same_path, count = rename_vault_item(catalog, cfg, target, "Progetto_Alpha.md")
+    assert same_path == target
+    assert count == 0
+
+    # Nonexistent file
+    with pytest.raises(NamingError):
+        rename_vault_item(catalog, cfg, mock_vault / "nonexistent.md", "New_Name.md")
+
+    # Destination already exists
+    dup = mock_vault / "10-19_Progetti" / "Existing.md"
+    dup.write_text("# Existing\n", encoding="utf-8")
+    with pytest.raises(NamingError):
+        rename_vault_item(catalog, cfg, target, "Existing.md")

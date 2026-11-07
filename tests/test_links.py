@@ -4,6 +4,7 @@ from pathlib import Path
 
 from vaultkeeper.config import load_vault_config
 from vaultkeeper.core.links import (
+    find_all_links_in_content,
     find_stem_collisions,
     parse_wikilink_target,
     resolve_link_target,
@@ -72,3 +73,17 @@ def test_find_stem_collisions(mock_vault: Path) -> None:
 
     assert "Nota_Beta" in collisions
     assert len(collisions["Nota_Beta"]) == 2
+
+
+def test_find_all_links_in_content_markdown_syntax(mock_vault: Path) -> None:
+    """Verify extracting both wikilinks and standard markdown links, while ignoring external URLs."""
+    content = """
+Vedi questo [Documento](Nota_Beta.md) e questo ![Immagine](Allegato_Test.pdf).
+Ignora invece [Google](https://google.com) o mail [Mail](mailto:info@test.com).
+    """
+    source = mock_vault / "10-19_Progetti" / "Progetto_Alpha.md"
+    links = find_all_links_in_content(content, source)
+    targets = [target for _, _, target, _, _, _ in links]
+    assert "Nota_Beta.md" in targets
+    assert "Allegato_Test.pdf" in targets
+    assert not any("google.com" in t for t in targets)

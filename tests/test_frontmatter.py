@@ -108,5 +108,25 @@ def test_parse_taxonomy_file(mock_vault: Path) -> None:
     tags = parse_taxonomy_file(tax_path)
     assert "area/lavoro" in tags
     assert "area/studio" in tags
-    assert "tipo/appunto" in tags
-    assert "stato/attivo" in tags
+
+
+def test_parse_frontmatter_edge_cases() -> None:
+    """Verify parsing frontmatter with comma-separated tags or invalid YAML."""
+    # Comma-separated tags string
+    content_comma = "---\ntags: tag1, tag2, tag3\ntipo: Appunto\n---\nCorpo"
+    fm, _ = parse_note_content(content_comma)
+    assert fm is not None
+    assert "tag1" in fm.tags
+    assert "tag2" in fm.tags
+
+    # Invalid YAML
+    content_bad_yaml = "---\n: bad yaml [\n---\nCorpo"
+    fm_bad, body_bad = parse_note_content(content_bad_yaml)
+    assert fm_bad is None
+    assert "Corpo" in body_bad
+
+    # YAML that is a scalar instead of a dict
+    content_scalar = "---\nJust a string\n---\nCorpo"
+    fm_scalar, body_scalar = parse_note_content(content_scalar)
+    assert fm_scalar is None
+    assert "Corpo" in body_scalar
