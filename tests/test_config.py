@@ -42,7 +42,7 @@ def test_load_config_with_custom_overrides(empty_temp_dir: Path) -> None:
     vault.mkdir()
     toml_path = vault / "vault.toml"
     custom_toml = f"""[vault]
-root_path = "{vault}"
+root_path = "{vault.as_posix()}"
 max_path_length = 180
 
 [naming]

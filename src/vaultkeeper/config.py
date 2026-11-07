@@ -265,4 +265,4 @@ def load_vault_config(
 
 def generate_default_config_content(root_path: Path) -> str:
     """Generate default vault.toml content with the specified root path."""
-    return DEFAULT_VAULT_TOML.format(root_path=str(root_path.resolve()))
+    return DEFAULT_VAULT_TOML.format(root_path=Path(root_path).resolve().as_posix())
