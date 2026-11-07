@@ -57,7 +57,7 @@ def normalize_stem(stem: str, config: VaultConfig) -> str:
     prefix_match = re.match(config.preserve_prefix_pattern, cleaned)
     if prefix_match:
         prefix = prefix_match.group(0)
-        remainder = cleaned[len(prefix):]
+        remainder = cleaned[len(prefix) :]
     else:
         remainder = cleaned
 
@@ -107,9 +107,7 @@ def update_wikilinks_in_content(
     escaped_old = re.escape(old_target)
 
     # Match [[old_target(#anchor)?(|alias)?]] or ![[...]]
-    pattern = re.compile(
-        r"(!?\[\[)" + escaped_old + r"((?:#[^\]|]*)?)((?:\|[^\]]*)?)(\]\])"
-    )
+    pattern = re.compile(r"(!?\[\[)" + escaped_old + r"((?:#[^\]|]*)?)((?:\|[^\]]*)?)(\]\])")
 
     def repl(m: re.Match) -> str:
         nonlocal count

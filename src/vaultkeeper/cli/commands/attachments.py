@@ -38,5 +38,7 @@ def handle_attachments(args: Namespace, logger: logging.Logger) -> int:
         logger.info("  - %s (%s)", o.rel_path.as_posix(), format_bytes(o.size_bytes))
 
     results = v.clean_attachments(target=target, hard_delete=hard_delete, dry_run=dry_run)
-    logger.info("%sCompleted %s for %d files (Total space: %s).", prefix, action_name, len(results), format_bytes(total_bytes))
+    logger.info(
+        "%sCompleted %s for %d files (Total space: %s).", prefix, action_name, len(results), format_bytes(total_bytes)
+    )
     return EXIT_SUCCESS

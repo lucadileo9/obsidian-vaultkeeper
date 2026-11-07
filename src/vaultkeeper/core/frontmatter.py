@@ -12,7 +12,9 @@ from ..models import Frontmatter, Note
 FRONTMATTER_PATTERN = re.compile(r"^---\r?\n(.*?)\r?\n---\r?\n(.*)$", re.DOTALL)
 CODE_BLOCK_PATTERN = re.compile(r"```[\s\S]*?```|`[^`\n]+`")
 MATH_BLOCK_PATTERN = re.compile(r"\$\$[\s\S]*?\$\$|\$[^$\n]+\$")
-C_DIRECTIVE_PATTERN = re.compile(r"^\s*#(?:include|define|undef|ifdef|ifndef|if|elif|else|endif|pragma)\b", re.MULTILINE)
+C_DIRECTIVE_PATTERN = re.compile(
+    r"^\s*#(?:include|define|undef|ifdef|ifndef|if|elif|else|endif|pragma)\b", re.MULTILINE
+)
 HEX_COLOR_PATTERN = re.compile(r"#[0-9a-fA-F]{3}(?:[0-9a-fA-F]{3})?\b")
 TAG_PATTERN = re.compile(r"(?<![a-zA-Z0-9_])#([a-zA-Z_][a-zA-Z0-9_\-/]*)")
 

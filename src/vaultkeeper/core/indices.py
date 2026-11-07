@@ -27,6 +27,7 @@ def get_index_filename_for_folder(folder_path: Path, config: VaultConfig) -> str
     else:
         # Contextual naming (default)
         import re
+
         clean_folder = re.sub(config.preserve_prefix_pattern, "", folder_name).strip()
         if not clean_folder:
             clean_folder = folder_name.strip()
@@ -93,9 +94,7 @@ tags:
         [
             d
             for d in folder_path.iterdir()
-            if d.is_dir()
-            and d.name not in config.ignored_folders
-            and not d.name.startswith(".")
+            if d.is_dir() and d.name not in config.ignored_folders and not d.name.startswith(".")
         ],
         key=lambda p: p.name,
     )

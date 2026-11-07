@@ -69,30 +69,46 @@ def build_parser() -> argparse.ArgumentParser:
 
     # 2. vk audit
     audit_parser = subparsers.add_parser("audit", help="Run 5-phase vault diagnostics and compute Health Score.")
-    audit_parser.add_argument("--step", type=int, choices=[1, 2, 3, 4, 5], default=None, help="Execute only a specific phase.")
+    audit_parser.add_argument(
+        "--step", type=int, choices=[1, 2, 3, 4, 5], default=None, help="Execute only a specific phase."
+    )
     audit_parser.add_argument("--json", type=str, default=None, help="Export diagnostic results to a JSON file.")
-    audit_parser.add_argument("--report-md", type=str, default=None, help="Export diagnostic results to a Markdown report.")
+    audit_parser.add_argument(
+        "--report-md", type=str, default=None, help="Export diagnostic results to a Markdown report."
+    )
 
     # 3. vk check-links
-    links_parser = subparsers.add_parser("check-links", help="Scan notes for broken wikilinks and unresolved media embeds.")
+    links_parser = subparsers.add_parser(
+        "check-links", help="Scan notes for broken wikilinks and unresolved media embeds."
+    )
     links_parser.add_argument("--target", type=str, default=None, help="Restrict scan to a specific note or subfolder.")
 
     # 4. vk clean-attachments
     att_parser = subparsers.add_parser("clean-attachments", help="Find and clean orphan media attachments.")
     att_parser.add_argument("--target", type=str, default=None, help="Restrict search to a specific directory.")
     att_parser.add_argument("--dry-run", action="store_true", help="Simulate deletion without touching disk files.")
-    att_parser.add_argument("--hard-delete", action="store_true", help="Permanently delete files instead of moving to .trash.")
+    att_parser.add_argument(
+        "--hard-delete", action="store_true", help="Permanently delete files instead of moving to .trash."
+    )
 
     # 5. vk normalize-names
-    naming_parser = subparsers.add_parser("normalize-names", help="Normalize note and file names according to naming style.")
-    naming_parser.add_argument("--target", type=str, default=None, help="Restrict normalization to a specific directory.")
+    naming_parser = subparsers.add_parser(
+        "normalize-names", help="Normalize note and file names according to naming style."
+    )
+    naming_parser.add_argument(
+        "--target", type=str, default=None, help="Restrict normalization to a specific directory."
+    )
     naming_parser.add_argument("--dry-run", action="store_true", help="Simulate normalization without renaming files.")
 
     # 6. vk generate-indices
     indices_parser = subparsers.add_parser("generate-indices", help="Generate or update folder MOC index notes.")
     indices_parser.add_argument("--target", type=str, default=None, help="Specific folder to generate index for.")
-    indices_parser.add_argument("--all", action="store_true", help="Recursively generate indices for all subdirectories.")
-    indices_parser.add_argument("--dry-run", action="store_true", help="Simulate index generation without writing to disk.")
+    indices_parser.add_argument(
+        "--all", action="store_true", help="Recursively generate indices for all subdirectories."
+    )
+    indices_parser.add_argument(
+        "--dry-run", action="store_true", help="Simulate index generation without writing to disk."
+    )
 
     # 7. vk frontmatter
     fm_parser = subparsers.add_parser("frontmatter", help="Inspect and manipulate YAML frontmatter.")
@@ -100,7 +116,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     set_type_parser = fm_subparsers.add_parser("set-type", help="Set or update the tipo frontmatter field.")
     set_type_parser.add_argument("--target", type=str, required=True, help="Path to target markdown note.")
-    set_type_parser.add_argument("--type", type=str, required=True, help="Type value (e.g. Appunto, Progetto, Risorsa).")
+    set_type_parser.add_argument(
+        "--type", type=str, required=True, help="Type value (e.g. Appunto, Progetto, Risorsa)."
+    )
     set_type_parser.add_argument("--dry-run", action="store_true", help="Simulate change without writing to disk.")
 
     add_tags_parser = fm_subparsers.add_parser("add-tags", help="Add tags to frontmatter.")

@@ -31,19 +31,14 @@ def test_run_full_audit(mock_vault: Path) -> None:
 
 def test_compute_health_score_clean() -> None:
     """Verify health score is 100.0 for clean vault."""
-    phases = [
-        PhaseResult(phase_id=i, title=f"Phase {i}", issues=[], warnings=[], metrics={})
-        for i in range(1, 6)
-    ]
+    phases = [PhaseResult(phase_id=i, title=f"Phase {i}", issues=[], warnings=[], metrics={}) for i in range(1, 6)]
     score = compute_health_score(phases)
     assert score == 100.0
 
 
 def test_compute_health_score_deductions() -> None:
     """Verify health score deductions."""
-    phases = [
-        PhaseResult(phase_id=5, title="Links", issues=["Broken 1", "Broken 2"], warnings=[], metrics={})
-    ]
+    phases = [PhaseResult(phase_id=5, title="Links", issues=["Broken 1", "Broken 2"], warnings=[], metrics={})]
     score = compute_health_score(phases)
     # 100 - (2 * 3.0) = 94.0
     assert score == 94.0

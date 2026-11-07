@@ -25,15 +25,11 @@ def run_phase_1_storage(config: VaultConfig, catalog: VaultCatalog) -> PhaseResu
         # 1. Path length check
         path_len = len(str(file_path))
         if path_len > config.max_path_length:
-            issues.append(
-                f"Path length {path_len} exceeds limit of {config.max_path_length}: {file_path.name}"
-            )
+            issues.append(f"Path length {path_len} exceeds limit of {config.max_path_length}: {file_path.name}")
 
         # 2. Allowed extensions check
         if config.allowed_extensions and file_path.suffix.lower() not in config.allowed_extensions:
-            warnings.append(
-                f"File extension {file_path.suffix} is not in allowed_extensions: {file_path.name}"
-            )
+            warnings.append(f"File extension {file_path.suffix} is not in allowed_extensions: {file_path.name}")
 
     # 3. Heavy files check
     heavy_files = find_heavy_files(catalog, config)
@@ -107,9 +103,7 @@ def run_phase_3_frontmatter(config: VaultConfig, catalog: VaultCatalog) -> Phase
         if not fm.tipo:
             issues.append(f"Empty or missing '{config.type_field}' field: {rel_str}")
         elif not fm.is_valid_type(config.allowed_types):
-            issues.append(
-                f"Invalid {config.type_field} '{fm.tipo}' (allowed: {config.allowed_types}): {rel_str}"
-            )
+            issues.append(f"Invalid {config.type_field} '{fm.tipo}' (allowed: {config.allowed_types}): {rel_str}")
         else:
             type_counts[fm.tipo] = type_counts.get(fm.tipo, 0) + 1
 
@@ -199,9 +193,7 @@ def run_phase_5_links(config: VaultConfig, catalog: VaultCatalog) -> PhaseResult
     broken = scan_broken_links(catalog, config)
     for b in broken:
         link_kind = "media embed" if b.is_media_embed() else "wikilink"
-        issues.append(
-            f"Broken {link_kind}: [[{b.clean_target}]] in {b.source_file.name}:{b.line_number}"
-        )
+        issues.append(f"Broken {link_kind}: [[{b.clean_target}]] in {b.source_file.name}:{b.line_number}")
 
     # 2. Stem collisions
     collisions = find_stem_collisions(catalog)

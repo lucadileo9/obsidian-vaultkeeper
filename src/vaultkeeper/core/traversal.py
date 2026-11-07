@@ -33,11 +33,7 @@ def walk_vault_files(
         dirpath = Path(dirpath_str)
 
         # Prune ignored folders in-place to prevent os.walk from descending
-        dirnames[:] = [
-            d
-            for d in dirnames
-            if d not in config.ignored_folders and not d.startswith(".")
-        ]
+        dirnames[:] = [d for d in dirnames if d not in config.ignored_folders and not d.startswith(".")]
 
         for fname in filenames:
             if fname.startswith("."):
@@ -60,11 +56,7 @@ def walk_vault_directories(
 
     for dirpath_str, dirnames, _ in os.walk(root):
         # Prune ignored directories in-place
-        dirnames[:] = [
-            d
-            for d in dirnames
-            if d not in config.ignored_folders and not d.startswith(".")
-        ]
+        dirnames[:] = [d for d in dirnames if d not in config.ignored_folders and not d.startswith(".")]
 
         for d in dirnames:
             yield Path(dirpath_str) / d

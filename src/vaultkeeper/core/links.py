@@ -189,8 +189,4 @@ def scan_broken_links(
 
 def find_stem_collisions(catalog: VaultCatalog) -> Dict[str, List[Path]]:
     """Return dictionary of note stems that exist in multiple locations."""
-    return {
-        stem: paths
-        for stem, paths in catalog.notes_by_stem.items()
-        if len(paths) > 1
-    }
+    return {stem: paths for stem, paths in catalog.notes_by_stem.items() if len(paths) > 1}

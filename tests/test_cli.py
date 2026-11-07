@@ -84,7 +84,19 @@ def test_cli_frontmatter_commands(mock_vault: Path) -> None:
     assert code1 == 0
 
     # add-tags
-    code2 = main(["--root", str(mock_vault), "frontmatter", "add-tags", "--target", str(note), "--tags", "test/tag1", "test/tag2"])
+    code2 = main(
+        [
+            "--root",
+            str(mock_vault),
+            "frontmatter",
+            "add-tags",
+            "--target",
+            str(note),
+            "--tags",
+            "test/tag1",
+            "test/tag2",
+        ]
+    )
     assert code2 == 0
 
     # sanitize-tags

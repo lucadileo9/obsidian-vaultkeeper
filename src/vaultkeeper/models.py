@@ -204,9 +204,7 @@ class VaultConfig:
             "Sistema",
         ]
     )
-    required_frontmatter_fields: List[str] = field(
-        default_factory=lambda: ["tipo", "tags"]
-    )
+    required_frontmatter_fields: List[str] = field(default_factory=lambda: ["tipo", "tags"])
     taxonomy_file: Optional[str] = "00_Tassonomia_Tag.md"
     strict_taxonomy: bool = True
     protect_c_directives: bool = True

@@ -60,9 +60,7 @@ def find_config_file(root_path: Path, explicit_path: Optional[Path] = None) -> O
     if explicit_path is not None:
         if explicit_path.is_file():
             return explicit_path.resolve()
-        raise ConfigurationError(
-            f"Specified configuration file not found: {explicit_path}"
-        )
+        raise ConfigurationError(f"Specified configuration file not found: {explicit_path}")
 
     vault_cfg = root_path / "vault.toml"
     if vault_cfg.is_file():
@@ -111,9 +109,7 @@ def load_vault_config(
         try:
             cm.load(str(cfg_path))
         except Exception as exc:
-            raise ConfigurationError(
-                f"Failed to load configuration file {cfg_path}", str(exc)
-            ) from exc
+            raise ConfigurationError(f"Failed to load configuration file {cfg_path}", str(exc)) from exc
 
     def safe_get(key: str, default: Any = None) -> Any:
         try:
@@ -190,12 +186,8 @@ def load_vault_config(
             "PKM",
         }
     )
-    disallowed_chars_regex = str(
-        safe_get("naming.disallowed_chars") or r"['\":?*!&|<>,\\()]"
-    )
-    preserve_prefix_pattern = str(
-        safe_get("naming.preserve_prefix_pattern") or r"^[0-9]{2}(-[0-9]{2})?_"
-    )
+    disallowed_chars_regex = str(safe_get("naming.disallowed_chars") or r"['\":?*!&|<>,\\()]")
+    preserve_prefix_pattern = str(safe_get("naming.preserve_prefix_pattern") or r"^[0-9]{2}(-[0-9]{2})?_")
 
     # Extract frontmatter section
     type_field = str(safe_get("frontmatter.type_field") or "tipo")
@@ -207,24 +199,16 @@ def load_vault_config(
     )
     required_fields_raw = safe_get("frontmatter.required_fields")
     required_frontmatter_fields = (
-        list(required_fields_raw)
-        if isinstance(required_fields_raw, (list, set, tuple))
-        else ["tipo", "tags"]
+        list(required_fields_raw) if isinstance(required_fields_raw, (list, set, tuple)) else ["tipo", "tags"]
     )
 
     # Extract tags section
     taxonomy_file = safe_get("tags.taxonomy_file")
     if taxonomy_file is not None:
         taxonomy_file = str(taxonomy_file)
-    strict_taxonomy = bool(
-        safe_get("tags.strict_taxonomy", True)
-    )
-    protect_c_directives = bool(
-        safe_get("tags.protect_c_directives", True)
-    )
-    protect_hex_colors = bool(
-        safe_get("tags.protect_hex_colors", True)
-    )
+    strict_taxonomy = bool(safe_get("tags.strict_taxonomy", True))
+    protect_c_directives = bool(safe_get("tags.protect_c_directives", True))
+    protect_hex_colors = bool(safe_get("tags.protect_hex_colors", True))
     tag_replacements_raw = safe_get("tags.tag_replacements")
     tag_replacements = (
         dict(tag_replacements_raw)
@@ -250,9 +234,7 @@ def load_vault_config(
     index_naming_pattern = str(safe_get("indices.naming_pattern") or "contextual")
     index_prefix = str(safe_get("indices.prefix") or "00_")
     index_summary_max_chars = int(safe_get("indices.summary_max_chars") or 250)
-    include_non_md = bool(
-        safe_get("indices.include_non_md", True)
-    )
+    include_non_md = bool(safe_get("indices.include_non_md", True))
 
     return VaultConfig(
         root_path=effective_root,
