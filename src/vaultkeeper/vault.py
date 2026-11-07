@@ -1,7 +1,7 @@
 """High-level Vault facade providing pure Python API for all vault operations."""
 
 from pathlib import Path
-from typing import Dict, List, Optional, Set, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Union
 
 from .config import load_vault_config
 from .core.attachments import (
@@ -18,8 +18,8 @@ from .core.frontmatter import (
 )
 from .core.indices import write_folder_index
 from .core.links import find_stem_collisions, scan_broken_links
-from .core.naming import batch_normalize, rename_vault_item
-from .core.traversal import build_vault_catalog, walk_vault_directories, walk_vault_files
+from .core.naming import batch_normalize
+from .core.traversal import build_vault_catalog, walk_vault_directories
 from .exceptions import FrontmatterError, VaultNotFoundError
 from .models import (
     AuditReport,

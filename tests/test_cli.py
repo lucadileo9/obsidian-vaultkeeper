@@ -71,7 +71,7 @@ def test_cli_generate_indices(mock_vault: Path) -> None:
     code = main(["--root", str(mock_vault), "generate-indices", "--all"])
     assert code == 0
     # Check that index note was generated
-    idx = mock_vault / "10-19_Progetti" / "00_Indice_10-19_Progetti.md"
+    idx = mock_vault / "10-19_Progetti" / "00_Indice_Progetti.md"
     assert idx.is_file()
 
 

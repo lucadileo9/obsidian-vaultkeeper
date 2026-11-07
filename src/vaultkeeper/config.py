@@ -1,8 +1,7 @@
 """Configuration loader and schema validator using the proteus library."""
 
-import os
 from pathlib import Path
-from typing import Any, Dict, Optional, Set
+from typing import Any, Optional, Set
 
 from proteus.core import ConfigurationManager
 from proteus.exceptions import ConfigurationNotLoadedError, InvalidKeyError

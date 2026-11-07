@@ -1,14 +1,12 @@
 """Unified 5-phase audit diagnostics engine with health score calculation."""
 
 from datetime import datetime, timezone
-from pathlib import Path
 from typing import Dict, List, Optional, Set
 
 from ..models import AuditReport, PhaseResult, VaultCatalog, VaultConfig
 from .attachments import find_heavy_files, find_orphan_attachments
 from .frontmatter import (
     extract_inline_tags,
-    parse_note_content,
     parse_taxonomy_file,
     read_note,
 )

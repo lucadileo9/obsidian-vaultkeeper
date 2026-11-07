@@ -5,7 +5,6 @@ from pathlib import Path
 import pytest
 
 from vaultkeeper.config import (
-    generate_default_config_content,
     load_vault_config,
 )
 from vaultkeeper.exceptions import ConfigurationError, VaultNotFoundError

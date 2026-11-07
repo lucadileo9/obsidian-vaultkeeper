@@ -2,7 +2,6 @@
 
 import logging
 from argparse import Namespace
-from pathlib import Path
 
 from ...vault import Vault
 

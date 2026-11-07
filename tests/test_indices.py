@@ -4,7 +4,6 @@ from pathlib import Path
 
 from vaultkeeper.config import load_vault_config
 from vaultkeeper.core.indices import (
-    generate_folder_index_content,
     get_index_filename_for_folder,
     write_folder_index,
 )
@@ -18,7 +17,7 @@ def test_get_index_filename_patterns(mock_vault: Path) -> None:
 
     # Contextual pattern
     cfg.index_naming_pattern = "contextual"
-    assert get_index_filename_for_folder(target, cfg) == "00_Indice_10-19_Progetti.md"
+    assert get_index_filename_for_folder(target, cfg) == "00_Indice_Progetti.md"
 
     # Static pattern
     cfg.index_naming_pattern = "static"
@@ -38,7 +37,7 @@ def test_write_folder_index(mock_vault: Path) -> None:
     idx_path, created = write_folder_index(target, cfg, catalog, dry_run=False)
     assert created is True
     assert idx_path.is_file()
-    assert idx_path.name == "00_Indice_10-19_Progetti.md"
+    assert idx_path.name == "00_Indice_Progetti.md"
 
     content = idx_path.read_text(encoding="utf-8")
     assert "tipo: Indice" in content

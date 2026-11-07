@@ -5,10 +5,7 @@ from argparse import Namespace
 from pathlib import Path
 
 from ...core.frontmatter import (
-    extract_inline_tags,
     parse_note_content,
-    parse_taxonomy_file,
-    read_note,
     update_frontmatter,
 )
 from ...core.traversal import walk_vault_files

@@ -6,6 +6,7 @@ from typing import List, Optional, Tuple
 from ..models import VaultCatalog, VaultConfig
 from ..utils.helpers import format_bytes, truncate_text
 from .frontmatter import parse_note_content
+from .naming import normalize_stem
 
 
 def get_index_filename_for_folder(folder_path: Path, config: VaultConfig) -> str:
@@ -25,9 +26,12 @@ def get_index_filename_for_folder(folder_path: Path, config: VaultConfig) -> str
         return f"{config.index_prefix}Indice.md"
     else:
         # Contextual naming (default)
-        # Strip numerical prefix from folder name for readability if desired, or keep intact
-        clean_folder = folder_name.replace(" ", "_")
-        return f"{config.index_prefix}Indice_{clean_folder}.md"
+        import re
+        clean_folder = re.sub(config.preserve_prefix_pattern, "", folder_name).strip()
+        if not clean_folder:
+            clean_folder = folder_name.strip()
+        norm_folder = normalize_stem(clean_folder, config)
+        return f"{config.index_prefix}Indice_{norm_folder}.md"
 
 
 def is_index_file(file_path: Path, config: VaultConfig) -> bool:
