@@ -203,7 +203,7 @@ def load_vault_config(
     )
 
     # Extract tags section
-    taxonomy_file = safe_get("tags.taxonomy_file")
+    taxonomy_file = safe_get("tags.taxonomy_file", "00_Tassonomia_Tag.md")
     if taxonomy_file is not None:
         taxonomy_file = str(taxonomy_file)
     strict_taxonomy = bool(safe_get("tags.strict_taxonomy", True))
