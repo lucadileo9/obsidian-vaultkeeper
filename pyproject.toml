@@ -8,7 +8,7 @@ version = "0.1.0"
 description = "Universal Second Brain governance engine, link validator and maintenance toolkit for Obsidian and document vaults"
 readme = "README.md"
 requires-python = ">=3.10"
-license = "MIT"
+license = "GPL-3.0-or-later"
 authors = [
     { name = "Luca Di Leo", email = "lucadileo70@gmail.com" }
 ]
@@ -17,6 +17,7 @@ classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
