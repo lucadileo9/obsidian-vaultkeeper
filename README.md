@@ -44,6 +44,7 @@ La documentazione esaustiva e' organizzata nella cartella `docs/`:
 - [**Prontuario Operativo Rapido (`docs/quickstart.md`)**](docs/quickstart.md): Guida all'installazione, primi passi e routine quotidiane.
 - [**Manuale di Governance e Remediation (`docs/governance.md`)**](docs/governance.md): Diagnostica a 5 fasi, calcolo Health Score e protocollo di bonifica.
 - [**Architettura e Modelli (`docs/architecture.md`)**](docs/architecture.md): Principi di progettazione, modelli di dominio e risoluzione O(1).
+- [**Roadmap Evolutiva (`ROADMAP.md`)**](ROADMAP.md): Piano strategico delle milestone, motori DRY e specifiche comandi futuri.
 - [**Specifiche di Configurazione (`docs/configuration.md`)**](docs/configuration.md): Schema dettagliato del file `vault.toml` e scenari SharePoint/Drive.
 - [**Riferimento Completo della CLI (`docs/cli-reference.md`)**](docs/cli-reference.md): Manuale di tutti i comandi `vk`, opzioni ed exit code.
 - [**Core API Python & MCP Server (`docs/python-api.md`)**](docs/python-api.md): Utilizzo programmatico della classe `Vault` ed esposizione per agenti AI.
