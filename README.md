@@ -1,9 +1,9 @@
-# VaultKeeper (`obsidian-vaultkeeper` / `vk`)
+# Obsidian VaultKeeper (`vk`)
 
-> Universal Second Brain governance engine, link validator and maintenance toolkit for Obsidian and document vaults.
+> Motore universale di governance, refactoring atomico, diagnostica e manutenzione per Second Brain Obsidian e archivi documentali.
 
 [![CI](https://github.com/lucadileo9/obsidian-vaultkeeper/actions/workflows/ci.yml/badge.svg)](https://github.com/lucadileo9/obsidian-vaultkeeper/actions/workflows/ci.yml)
-[![codecov](https://codecov.io/gh/lucadileo9/obsidian-vaultkeeper/branch/main/graph/badge.svg)](https://codecov.io/gh/lucadileo9/obsidian-vaultkeeper)
+[![Coverage](https://img.shields.io/badge/coverage-90%25-brightgreen.svg)]()
 [![Python](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.13%20%7C%203.14-blue.svg)]()
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
@@ -11,22 +11,24 @@
 
 ## Panoramica
 
-`vaultkeeper` (distribuito su PyPI come `obsidian-vaultkeeper` con comando CLI `vk`) e' una libreria modulare e motore di governance universale per Second Brain personali, archivi documentali (Google Drive, Microsoft SharePoint, OneDrive) e server MCP per agenti AI autonomi.
+**`obsidian-vaultkeeper`** (distribuito tramite il binario da riga di comando **`vk`** e come libreria Python `vaultkeeper`) è un sistema di livello enterprise progettato per presidiare, normalizzare e manutenere archivi di appunti Markdown complessi (oltre 3.900 note su architettura Johnny.Decimal).
 
-Sviluppato per superare le limitazioni di script procedurali isolati, garantisce una separazione architetturale rigida tra:
-1. **Core API Computazionale Pura (`vaultkeeper.core`):** Nessun effetto collaterale, zero chiamate a `print()` o `sys.exit()`, ritorno esclusivo di modelli di dominio tipizzati (`dataclass`) o sollevamento di eccezioni dedicate (`VaultKeeperError`).
-2. **Motore di Configurazione Dinamico (`vaultkeeper.config`):** Integrazione nativa con la libreria PyPI `proteus-config` per la gestione gerarchica del file `vault.toml`.
-3. **Livello di Presentazione CLI (`vaultkeeper.cli`):** Sottocomandi espliciti (`vk audit`, `vk check-links`, `vk clean-attachments`, `vk normalize-names`, `vk generate-indices`, `vk frontmatter`, `vk disambiguate`, `vk init`), log formattati a colori su terminale ANSI e rimozione automatica dei codici ANSI su file di log.
+Il sistema è ingegnerizzato secondo un'**architettura a doppia testa**:
+1. **SDK Python Programmatico ([`Vault`](docs/architecture/facade.md))**: API orientata agli oggetti, priva di effetti collaterali a terminale (zero `print` o `sys.exit`), che scambia modelli di dominio immutabili ed è nativamente predisposta per script di automazione e server MCP per agenti AI autonomi.
+2. **Command Line Interface ([`vk`](docs/cli/overview.md))**: Interfaccia moderna a 20 comandi, arricchita con rendering `Rich`, simulazioni di sicurezza pre-volo (`--dry-run`), formati serializzabili (`--format json|yaml|csv`) e codici di ritorno semantici POSIX (`ExitCode`).
+
+Tutte le operazioni mutative sono incapsulate in un **Transaction Journal atomico con hashing crittografico SHA-256 e rollback LIFO**: qualsiasi creazione, rinomina, spostamento o cancellazione può essere annullata all'istante tramite `vk undo`.
 
 ---
 
 ## Installazione
 
+### Tramite Pip (Ambiente Virtuale)
 ```bash
 pip install obsidian-vaultkeeper
 ```
 
-Per l'ambiente di sviluppo e collaudo:
+### Installazione per Sviluppo e Contributi
 ```bash
 git clone https://github.com/lucadileo9/obsidian-vaultkeeper.git
 cd obsidian-vaultkeeper
@@ -37,163 +39,143 @@ pip install -e ".[dev]"
 
 ---
 
-## Indice della Documentazione
+## Primi Passi (Quickstart)
 
-La documentazione esaustiva e' organizzata nella cartella `docs/`:
+### 1. Inizializzare la Configurazione del Vault
+```bash
+vk init --target /srv/storage/Vault
+```
+Genera il file guida `vault.toml` con le convenzioni di denominazione (`Title_Case`), i tag ammessi, le estensioni consentite e le soglie di archiviazione.
 
-- [**Prontuario Operativo Rapido (`docs/quickstart.md`)**](docs/quickstart.md): Guida all'installazione, primi passi e routine quotidiane.
-- [**Manuale di Governance e Remediation (`docs/governance.md`)**](docs/governance.md): Diagnostica a 5 fasi, calcolo Health Score e protocollo di bonifica.
-- [**Architettura e Modelli (`docs/architecture.md`)**](docs/architecture.md): Principi di progettazione, modelli di dominio e risoluzione O(1).
-- [**Roadmap Evolutiva (`ROADMAP.md`)**](ROADMAP.md): Piano strategico delle milestone, motori DRY e specifiche comandi futuri.
-- [**Specifiche di Configurazione (`docs/configuration.md`)**](docs/configuration.md): Schema dettagliato del file `vault.toml` e scenari SharePoint/Drive.
-- [**Riferimento Completo della CLI (`docs/cli-reference.md`)**](docs/cli-reference.md): Manuale di tutti i comandi `vk`, opzioni ed exit code.
-- [**Core API Python & MCP Server (`docs/python-api.md`)**](docs/python-api.md): Utilizzo programmatico della classe `Vault` ed esposizione per agenti AI.
-- [**Protocollo di Test e Qualita' (`docs/testing.md`)**](docs/testing.md): Struttura dei 53 test pytest, coverage e test di ciclo di vita E2E.
+### 2. Eseguire l'Audit Diagnostico a 5 Fasi
+```bash
+vk audit
+```
+Verifica filesystem, denominazione, conformità frontmatter YAML, tassonomia controllata dei tag e integrità dei wikilink, calcolando il **Vault Health Score** (da 0.0 a 100.0).
+
+### 3. Creare una Nuova Nota Standardizzata
+```bash
+vk create "Architettura a Microservizi" --type Appunto --tags "tech/architettura,tech/cloud"
+```
+Applica automaticamente l'auto-routing Johnny.Decimal verso la cartella corretta (`20-29_Istruzione/`), inietta le variabili nel template e aggiorna il MOC `00_Indice.md`.
+
+### 4. Rinominare con Refactoring Globale dei Backlink
+```bash
+vk rename 10-19_Progetti/vecchio_progetto.md Progetto_Varys
+```
+Rinomina il file e aggiorna simultaneamente tutti i collegamenti `[[...]]` che puntavano al vecchio nome all'interno dell'intero Vault.
+
+### 5. Annullare un'Operazione Involontaria
+```bash
+vk undo
+```
+Esegue un controllo di sicurezza crittografico SHA-256 (rifiuta il rollback se i file sono stati modificati nel frattempo da terzi) e ripristina lo stato precedente in ordine inverso.
 
 ---
 
-## Utilizzo da Riga di Comando (`vk`)
+## Tabella Sinottica dei 20 Comandi CLI
 
-La CLI espone comandi autoesplicativi, flag per simulazione non distruttiva (`--dry-run`), formattazione log su file (`--log-file`) e codici di uscita semantici POSIX (`0` = Successo, `1` = Errore, `2` = Rilevate criticita'/link rotti):
+Per la consultazione dettagliata di argomenti, opzioni ed esempi d'uso per ciascun comando, consultare il [**Manuale di Riferimento dei Comandi CLI**](docs/cli/commands_reference.md).
+
+| Comando | Sintassi di Esempio | Descrizione Operativa | Reversibile con `undo` |
+| :--- | :--- | :--- | :---: |
+| **`init`** | `vk init [--force]` | Genera il file di configurazione predefinito `vault.toml`. | No |
+| **`audit`** | `vk audit [--step 1..5] [--json out.json]` | Diagnostica a 5 fasi con calcolo del Vault Health Score. | No (Read-Only) |
+| **`check-links`** | `vk check-links [--target <path>]` | Rileva wikilink rotti ed embed multimediali orfani. | No (Read-Only) |
+| **`clean-attachments`** | `vk clean-attachments [--dry-run]` | Bonifica file orfani tramite soft-delete reversibile in `.trash/`. | **Sì** |
+| **`normalize-names`** | `vk normalize-names [--dry-run]` | Converte in `Title_Case` e riscrive contestualmente i backlink. | **Sì** |
+| **`generate-indices`** | `vk generate-indices [--all] [--dry-run]` | Genera o aggiorna i file MOC `00_Indice.md` di cartella. | No (Idempotente) |
+| **`frontmatter`** | `vk frontmatter set-type --target n.md --type Appunto` | Ispeziona o modifica metadati YAML (`tipo`, tag). | **Sì** |
+| **`disambiguate`** | `vk disambiguate [--target <dir>]` | Rileva collisioni di stem omonimi tra cartelle diverse. | No (Read-Only) |
+| **`history`** | `vk history [--limit 20] [--format json]` | Mostra lo storico delle transazioni atomiche del Journal. | No (Read-Only) |
+| **`undo`** | `vk undo [--tx <id>] [--dry-run]` | Ripristina lo stato del filesystem precedente con verifica SHA-256. | **Sì** (Rollback) |
+| **`rename`** | `vk rename vecchio.md Nuovo.md` | Rinomina una nota con sincronizzazione globale di backlink e MOC. | **Sì** |
+| **`move`** | `vk move nota.md 10-19_Progetti/` | Sposta file o cartelle aggiornando entrambi i MOC di area. | **Sì** |
+| **`archive`** | `vk archive Progetto_X/ [--no-tombstone]` | Trasferisce in cold storage e deposita scheda tombstone. | **Sì** |
+| **`offload`** | `vk offload [target] [--dry-run]` | Sposta allegati pesanti (>50MB) in cold storage rimpiazzando i link. | **Sì** |
+| **`tags`** | `vk tags add tech/rust [--section "Tecnologia"]` | Gestisce il vocabolario controllato `00_Tassonomia_Tag.md`. | **Sì** |
+| **`config`** | `vk config set naming_style Title_Case` | Ispeziona o modifica impostazioni a caldo in `vault.toml`. | **Sì** |
+| **`search`** | `vk search "query" [--tag t] [--type Appunto]` | Ricerca full-text e filtri combinatori multi-criterio. | No (Read-Only) |
+| **`graph-health`** | `vk graph-health [--format md]` | Analisi topologica del grafo (top hubs, dead-ends, orfani). | No (Read-Only) |
+| **`map`** | `vk map [--output Mappa.md] [--format json]` | Cartografia strutturale Johnny.Decimal e volumi del Vault. | No (Read-Only) |
+| **`create`** | `vk create "Titolo" --type Appunto [--tags ...]` | Creazione standardizzata con auto-routing, template e MOC. | **Sì** |
+
+---
+
+## Utilizzo come Libreria Python (SDK)
+
+La classe Facade [`Vault`](docs/architecture/facade.md) espone un'interfaccia unificata per script di automazione o agenti intelligenti:
+
+```python
+from vaultkeeper import Vault
+
+# Inizializzazione della Facade
+vault = Vault(root_path="/srv/storage/Vault")
+
+# 1. Diagnostica e referto di salute
+report = vault.audit()
+print(f"Health Score: {report.health_score}/100.0 (Problemi: {report.total_issues})")
+
+# 2. Creazione standardizzata con auto-routing
+result = vault.create(
+    title="Strategie di Ottimizzazione Memoria",
+    tipo="Appunto",
+    tags=["tech/python", "architettura/performance"],
+)
+print(f"Nota creata in: {result.file_path} (Transazione: {result.tx_id})")
+
+# 3. Rinomina sicura con refactoring globale dei wikilink
+rename_res = vault.rename(
+    old_path="20-29_Istruzione/Informatica/vecchio_appunto.md",
+    new_name="Nuovo_Appunto",
+)
+print(f"Wikilink aggiornati: {rename_res.updated_links_count}")
+
+# 4. Rollback immediato in caso di errore
+undo_res = vault.undo()
+print(f"Rollback completato: {undo_res.reverted_actions} azioni ripristinate")
+```
+
+---
+
+## Mappa della Documentazione Tecnica
+
+L'intero impianto documentale è organizzato nella cartella [`docs/`](docs):
 
 ```text
-vk [-h] [-v] [-q] [--log-file LOG_FILE] [--root ROOT] [--config CONFIG] [--version] <command>
-```
-
-### Comandi Principali
-
-| Comando | Descrizione |
-| :--- | :--- |
-| `vk init [--target <dir>]` | Genera un file `vault.toml` di default pronto all'uso. |
-| `vk audit [--step 1..5] [--json out.json] [--report-md out.md]` | Diagnostica unificata a 5 fasi con calcolo del Vault Health Score (0-100). |
-| `vk check-links [--target <path>]` | Scansione O(1) di wikilink spezzati ed embed multimediali mancanti. |
-| `vk clean-attachments [--dry-run] [--hard-delete]` | Individuazione e spostamento nel cestino `.trash` di file multimediali orfani. |
-| `vk normalize-names [--dry-run] [--target <path>]` | Normalizzazione di file e cartelle (`Title_Case`, `kebab-case`, `snake_case`) e sincronizzazione atomica dei wikilink correlati. |
-| `vk generate-indices [--all] [--dry-run] [--target <path>]` | Generazione/aggiornamento di mappe di contenuto (MOC) con naming contestuale anti-collisione (`00_Indice_<Cartella>.md`). |
-| `vk frontmatter set-type --target <file> --type <nome>` | Impostazione o aggiornamento sicuro del campo `tipo` YAML. |
-| `vk frontmatter add-tags --target <file> --tags <t1> <t2>` | Iniezione o aggiornamento di tag YAML senza alterare altri metadati. |
-| `vk frontmatter sanitize-tags [--dry-run]` | Linter dei tag rispetto alla tassonomia controllata e mapping di sinonimi. |
-| `vk disambiguate [--target <path>]` | Rilevamento di collisioni di stem omonimi tra cartelle distinte. |
-
----
-
-## Configurazione (`vault.toml`)
-
-Un file `vault.toml` posto nella radice del Vault (o in `~/.config/vaultkeeper/config.toml`) governa le policy di convalida:
-
-```toml
-[vault]
-root_path = "/srv/storage/Vault"
-allowed_extensions = [".md", ".pdf", ".png", ".jpg", ".jpeg", ".svg", ".docx", ".xlsx", ".pptx"]
-ignored_folders = [".obsidian", ".trash", ".git", ".stversions", ".deleted", "node_modules", ".venv"]
-max_path_length = 240
-
-[naming]
-style = "Title_Case"                         # "Title_Case", "kebab-case", "snake_case", "none"
-disallowed_chars = "[\'\\":?*!&|<>,\\\\\\\\()]"
-acronyms = ["AI", "API", "AWS", "BCG", "CRM", "HPC", "IT", "JEMORE", "MECE", "SQL", "UX", "MOC", "PKM"]
-preserve_prefix_pattern = "^[0-9]{2}(-[0-9]{2})?_"
-
-[frontmatter]
-type_field = "tipo"
-allowed_types = ["Appunto", "Contatto", "Progetto", "Risorsa", "Indice", "Sistema"]
-required_fields = ["tipo", "tags"]
-
-[tags]
-taxonomy_file = "00_Tassonomia_Tag.md"
-strict_taxonomy = true
-protect_c_directives = true                  # Previene falsi positivi per #include e #define
-protect_hex_colors = true                    # Previene falsi positivi per codici colore (#FFFFFF)
-tag_replacements = { "appunti" = "tipo/appunto", "risorse" = "tipo/risorsa" }
-
-[attachments]
-folder_names = ["_attachments", "attachments", "assets", "Slide", "media"]
-heavy_file_threshold_mb = 50
-trash_folder = ".trash"
-
-[indices]
-naming_pattern = "contextual"                # "contextual" (00_Indice_<folder>.md), "static" (00_Indice.md), "readme" (README.md)
-prefix = "00_"
-summary_max_chars = 250
-include_non_md = true
-```
-
-### Risoluzione delle Collisioni per gli Indici
-
-La modalita' `naming_pattern = "contextual"` genera file nel formato `00_Indice_<Nome_Cartella>.md` (es. `00_Indice_Progetti.md` per la cartella `10-19_Progetti`). Questo elimina le ambiguità nel Quick Switcher di Obsidian (`Ctrl + O`) preservando al contempo l'ordinamento naturale in cima alla cartella grazie al prefisso `00_`.
-
----
-
-## Utilizzo come Libreria Python
-
-```python
-from vaultkeeper import Vault
-
-# Inizializzazione della facciata
-vault = Vault("/percorso/del/vault")
-
-# 1. Diagnostica a 5 fasi
-report = vault.audit()
-print(f"Health Score: {report.health_score} / 100.0 (Problemi: {report.total_issues})")
-
-# 2. Controllo collegamenti rotti
-broken = vault.check_links()
-for link in broken:
-    print(f"Link rotto: [[{link.clean_target}]] in {link.source_file.name}:{link.line_number}")
-
-# 3. Pulizia allegati orfani
-cleaned = vault.clean_attachments(dry_run=False)
-print(f"Spostati nel cestino {len(cleaned)} file orfani.")
-
-# 4. Normalizzazione nomi e aggiornamento sincronizzato dei wikilink
-renamed = vault.normalize_names(dry_run=False)
-for old_p, new_p, links_updated in renamed:
-    print(f"Rinominato {old_p.name} -> {new_p.name} (Aggiornati {links_updated} collegamenti)")
-
-# 5. Generazione automatica MOC per tutte le cartelle
-indices = vault.generate_indices(recursive=True)
-print(f"Generate {len(indices)} note indice MOC.")
+docs/
+├── architecture/
+│   ├── facade.md              # Disamina completa della Facade (Vault), metodi e sequenze
+│   ├── core_modules.md        # I 15 moduli computazionali del core: classi, funzioni, I/O
+│   ├── models.md              # Catalogo esaustivo dei 23 Domain Models immutabili
+│   └── transaction_journal.md # Meccanica dello stato, hashing SHA-256 e rollback LIFO
+├── cli/
+│   ├── overview.md            # Panoramica CLI, exit codes, opzioni globali e dry-run
+│   └── commands_reference.md  # Specifiche esaustive e parametri per tutti i 20 comandi
+└── testing/
+    └── test_suite.md          # 153 test, copertura 90%, fixture isolate e matrici CI
 ```
 
 ---
 
-## Integrazione con Server MCP (Model Context Protocol)
+## Qualità e Suite di Test
 
-Grazie alla Core API pura, esporre gli strumenti di VaultKeeper ad agenti AI tramite FastMCP richiede pochissime righe:
+- **Test Suite**: 153 test automatizzati eseguiti in meno di 0.8s.
+- **Copertura del Codice**: $\ge 90\%$ complessivo misurato con `pytest-cov`.
+- **Controllo Tipi Statico**: 100% conforme a `mypy --strict` su 78 file sorgente.
+- **Stile & Linting**: 100% conforme alle regole di `ruff check` e `ruff format`.
+- **Sicurezza**: Zero vulnerabilità o avvisi rilevati tramite scanner AST `bandit`.
 
-```python
-from mcp.server.fastmcp import FastMCP
-from vaultkeeper import Vault
-
-mcp = FastMCP("VaultKeeper-Server")
-
-@mcp.tool()
-def audit_vault(vault_path: str = "/srv/storage/Vault") -> dict:
-    """Esegue l'audit completo di integrità del Vault e restituisce il report strutturato."""
-    v = Vault(vault_path)
-    return v.audit().to_dict()
-
-@mcp.tool()
-def get_broken_links(vault_path: str = "/srv/storage/Vault") -> list:
-    """Restituisce l'elenco dei collegamenti spezzati o allegati mancanti."""
-    v = Vault(vault_path)
-    return [b.__dict__ for b in v.check_links()]
-```
-
----
-
-## Suite di Test e Qualita'
-
-Il progetto include 53 test unitari ed End-to-End con oltre l'83% di copertura del codice:
-
+Per eseguire localmente la suite di test e le verifiche di qualità:
 ```bash
-pytest --cov=vaultkeeper --cov-report=term-missing tests/
-ruff check src/ tests/
+.venv/bin/pytest --cov=vaultkeeper --cov-report=term-missing
+.venv/bin/mypy src/ tests/
+.venv/bin/ruff check src/ tests/
+.venv/bin/bandit -r src/ -ll
 ```
 
 ---
 
-## Autore e Licenza
+## Licenza
 
-- **Autore:** Luca Di Leo (<lucadileo70@gmail.com>)
-- **Licenza:** MIT License (consultare il file `LICENSE` per i dettagli).
+Questo progetto è rilasciato sotto licenza [GNU General Public License v3.0](LICENSE).
