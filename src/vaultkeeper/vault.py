@@ -17,17 +17,22 @@ from .core.frontmatter import (
     read_note,
     update_frontmatter,
 )
-from .core.indices import write_folder_index
+from .core.indices import IndexManager, write_folder_index
 from .core.journal import TransactionJournal
-from .core.links import find_stem_collisions, scan_broken_links
+from .core.lifecycle import archive_item, move_item, offload_media, rename_item
+from .core.links import WikilinkEngine, find_stem_collisions, scan_broken_links
 from .core.naming import batch_normalize
 from .core.traversal import build_vault_catalog, walk_vault_directories
 from .exceptions import FrontmatterError, VaultNotFoundError
 from .models import (
+    ArchiveResult,
     AuditReport,
     BrokenLink,
+    MoveResult,
     Note,
+    OffloadResult,
     OrphanAttachment,
+    RenameResult,
     TransactionRecord,
     UndoResult,
     VaultCatalog,
@@ -267,3 +272,140 @@ class Vault:
         """Load and return an object-oriented MarkdownDocument for a note."""
         p = Path(file_path).resolve()
         return MarkdownDocument.from_file(p, type_field=self.config.type_field)
+
+    def rename(
+        self,
+        old_path: Union[str, Path],
+        new_name: str,
+        skip_links: bool = False,
+        dry_run: bool = False,
+    ) -> RenameResult:
+        """Rename a note or asset with global wikilink refactoring and index synchronization."""
+        source_p = Path(old_path).resolve()
+        idx_mgr = IndexManager(self.config)
+        link_engine = WikilinkEngine(self.config)
+
+        if dry_run:
+            return rename_item(
+                self.catalog,
+                self.config,
+                idx_mgr,
+                link_engine,
+                source_p,
+                new_name,
+                skip_links=skip_links,
+                dry_run=True,
+            )
+
+        with self.journal.begin_transaction("rename", f"Rename {source_p.name} to {new_name}") as tx:
+            res = rename_item(
+                self.catalog,
+                self.config,
+                idx_mgr,
+                link_engine,
+                source_p,
+                new_name,
+                skip_links=skip_links,
+                transaction=tx,
+                dry_run=False,
+            )
+
+        self.refresh()
+        return res
+
+    def move(
+        self,
+        source_path: Union[str, Path],
+        dest_folder: Union[str, Path],
+        dry_run: bool = False,
+    ) -> MoveResult:
+        """Move a file or folder into a different Johnny.Decimal directory."""
+        source_p = Path(source_path).resolve()
+        dest_p = Path(dest_folder).resolve()
+        idx_mgr = IndexManager(self.config)
+
+        if dry_run:
+            return move_item(
+                self.config,
+                idx_mgr,
+                source_p,
+                dest_p,
+                dry_run=True,
+            )
+
+        with self.journal.begin_transaction("move", f"Move {source_p.name} to {dest_p.name}") as tx:
+            res = move_item(
+                self.config,
+                idx_mgr,
+                source_p,
+                dest_p,
+                transaction=tx,
+                dry_run=False,
+            )
+
+        self.refresh()
+        return res
+
+    def archive(
+        self,
+        item_path: Union[str, Path],
+        no_tombstone: bool = False,
+        dry_run: bool = False,
+    ) -> ArchiveResult:
+        """Archive a note or project folder to mirror cold storage with Tombstone support."""
+        item_p = Path(item_path).resolve()
+        idx_mgr = IndexManager(self.config)
+
+        if dry_run:
+            return archive_item(
+                self.config,
+                idx_mgr,
+                item_p,
+                no_tombstone=no_tombstone,
+                dry_run=True,
+            )
+
+        with self.journal.begin_transaction("archive", f"Archive {item_p.name}") as tx:
+            res = archive_item(
+                self.config,
+                idx_mgr,
+                item_p,
+                no_tombstone=no_tombstone,
+                transaction=tx,
+                dry_run=False,
+            )
+
+        self.refresh()
+        return res
+
+    def offload(
+        self,
+        target: Optional[Union[str, Path]] = None,
+        dry_run: bool = False,
+    ) -> OffloadResult:
+        """Offload heavy binary files (>50MB or specific target) to cold storage."""
+        link_engine = WikilinkEngine(self.config)
+
+        if dry_run:
+            return offload_media(
+                self.catalog,
+                self.config,
+                link_engine,
+                target=target,
+                dry_run=True,
+            )
+
+        desc = f"Offload media target: {target}" if target else "Offload heavy media files"
+        with self.journal.begin_transaction("offload", desc) as tx:
+            res = offload_media(
+                self.catalog,
+                self.config,
+                link_engine,
+                target=target,
+                transaction=tx,
+                dry_run=False,
+            )
+
+        if res.offloaded_files:
+            self.refresh()
+        return res
