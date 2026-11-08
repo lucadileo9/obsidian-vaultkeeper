@@ -9,10 +9,12 @@ from .commands.attachments import handle_attachments
 from .commands.audit import handle_audit
 from .commands.disambiguate import handle_disambiguate
 from .commands.frontmatter import handle_frontmatter
+from .commands.history import handle_history
 from .commands.indices import handle_indices
 from .commands.init import handle_init
 from .commands.links import handle_links
 from .commands.naming import handle_naming
+from .commands.undo import handle_undo
 from .logging import close_cli_logger, setup_cli_logger
 
 
@@ -136,6 +138,27 @@ def build_parser() -> argparse.ArgumentParser:
     disambiguate_parser.add_argument("--target", type=str, default=None, help="Target folder to scan.")
     disambiguate_parser.add_argument("--dry-run", action="store_true", help="Simulate without action.")
 
+    # 9. vk history
+    history_parser = subparsers.add_parser("history", help="List historical vaultkeeper transactions.")
+    history_parser.add_argument("--limit", type=int, default=20, help="Maximum number of transactions to list.")
+    history_parser.add_argument(
+        "--format",
+        type=str,
+        default="md",
+        choices=["md", "json", "yaml", "csv"],
+        help="Output format (default: md).",
+    )
+
+    # 10. vk undo
+    undo_parser = subparsers.add_parser("undo", help="Revert the most recent or specified transaction.")
+    undo_parser.add_argument(
+        "--tx",
+        type=str,
+        default=None,
+        help="Specific transaction ID to revert (default: latest active transaction).",
+    )
+    undo_parser.add_argument("--dry-run", action="store_true", help="Preview undo actions without modifying files.")
+
     return parser
 
 
@@ -165,6 +188,8 @@ def main(argv: Optional[List[str]] = None) -> int:
             "generate-indices": handle_indices,
             "frontmatter": handle_frontmatter,
             "disambiguate": handle_disambiguate,
+            "history": handle_history,
+            "undo": handle_undo,
         }
 
         handler = command_handlers.get(args.command)
