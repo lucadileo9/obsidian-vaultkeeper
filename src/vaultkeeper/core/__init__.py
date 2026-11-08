@@ -7,6 +7,7 @@ from .attachments import (
     soft_delete_attachment,
 )
 from .audit import run_audit
+from .document import MarkdownDocument
 from .frontmatter import (
     extract_inline_tags,
     parse_note_content,
@@ -70,4 +71,5 @@ __all__ = [
     "run_audit",
     "TransactionJournal",
     "TransactionContext",
+    "MarkdownDocument",
 ]
