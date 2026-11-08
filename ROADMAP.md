@@ -169,7 +169,7 @@ Tutti i comandi CLI e i metodi della classe facciata `Vault` operano esclusivame
 
 ```text
 +-----------------------------------------------------------------------------------+
-| MILESTONE 1: DRY Foundations & Reversibility Engine                               |
+| MILESTONE 1: DRY Foundations & Reversibility Engine                 [COMPLETED]   |
 | - TransactionJournal & Context Manager (.vaultkeeper/history/*.json.gz)           |
 | - MarkdownDocument Model & Document Object Abstraction                            |
 | - OutputFormatter (md, json, yaml, csv)                                           |
@@ -179,7 +179,7 @@ Tutti i comandi CLI e i metodi della classe facciata `Vault` operano esclusivame
                                         |
                                         v
 +-----------------------------------------------------------------------------------+
-| MILESTONE 2: Lifecycle & Safe Refactoring Engine                                  |
+| MILESTONE 2: Lifecycle & Safe Refactoring Engine                    [COMPLETED]   |
 | - IndexManager unificato (00_Indice_<Cartella>.md)                                |
 | - WikilinkEngine potenziato (ancore, alias, link standard, regex unificata)       |
 | - CLI commands: vk rename (con pre-flight checks), vk move, vk archive, vk offload|
@@ -188,7 +188,7 @@ Tutti i comandi CLI e i metodi della classe facciata `Vault` operano esclusivame
                                         |
                                         v
 +-----------------------------------------------------------------------------------+
-| MILESTONE 3: Intelligence, Topology & Taxonomy                                    |
+| MILESTONE 3: Intelligence, Topology & Taxonomy                      [COMPLETED]   |
 | - TaxonomyEngine (00_Tassonomia_Tag.md)                                           |
 | - CLI commands: vk tags show|add|remove, vk config show|set                       |
 | - CLI command: vk search (filtri semantici tag, type, links-to, folder)           |
@@ -198,7 +198,7 @@ Tutti i comandi CLI e i metodi della classe facciata `Vault` operano esclusivame
                                         |
                                         v
 +-----------------------------------------------------------------------------------+
-| MILESTONE 4: Templating & Creation Engine                                         |
+| MILESTONE 4: Templating & Creation Engine                           [COMPLETED]   |
 | - TemplateEngine (templates_folder, interpolazione variabili, validazione)        |
 | - CLI command: vk create (con validazione rigida tipo/tags e auto-indicizzazione) |
 +-----------------------------------------------------------------------------------+
