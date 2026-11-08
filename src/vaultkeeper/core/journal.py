@@ -7,7 +7,7 @@ import shutil
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, List, Optional, Union
 
 from ..exceptions import JournalError, UndoConflictError, UndoError
 from ..models import ActionRecord, TransactionRecord, UndoResult
@@ -311,9 +311,7 @@ class TransactionJournal:
             abs_p = self.root_path / action.path
             if action.action_type == "write_content":
                 if not abs_p.is_file():
-                    raise UndoConflictError(
-                        f"Target file '{action.path}' does not exist for undo verification."
-                    )
+                    raise UndoConflictError(f"Target file '{action.path}' does not exist for undo verification.")
                 current_hash = compute_content_hash(abs_p.read_text(encoding="utf-8"))
                 if action.hash_after and current_hash != action.hash_after:
                     raise UndoConflictError(
@@ -334,9 +332,7 @@ class TransactionJournal:
                         f"Moved file '{action.target_path}' is missing. Cannot undo move to '{action.path}'."
                     )
                 if abs_p.exists():
-                    raise UndoConflictError(
-                        f"Original location '{action.path}' is already occupied. Cannot undo move."
-                    )
+                    raise UndoConflictError(f"Original location '{action.path}' is already occupied. Cannot undo move.")
 
         affected_files: List[str] = [a.path for a in record.actions]
 

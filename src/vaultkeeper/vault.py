@@ -129,9 +129,7 @@ class Vault:
                         hard_delete_attachment(orig, transaction=tx)
                         results.append((orig, None))
                     else:
-                        dest = soft_delete_attachment(
-                            orig, self.root, self.config.trash_folder, transaction=tx
-                        )
+                        dest = soft_delete_attachment(orig, self.root, self.config.trash_folder, transaction=tx)
                         results.append((orig, dest))
             self.refresh()
 

@@ -58,3 +58,29 @@ def test_vault_facade_generate_indices(mock_vault: Path) -> None:
     idx_path, changed = results[0]
     assert idx_path.is_file()
     assert changed is True
+
+
+def test_vault_facade_history_and_undo(mock_vault: Path) -> None:
+    """Verify facade history, undo, and get_document methods."""
+    v = Vault(mock_vault)
+    note_path = mock_vault / "10-19_Progetti" / "Progetto_Alpha.md"
+    orig_text = note_path.read_text(encoding="utf-8")
+
+    # Mutate frontmatter
+    v.set_frontmatter_type(note_path, "Risorsa")
+    assert "tipo: Risorsa" in note_path.read_text(encoding="utf-8")
+
+    # Check history
+    hist = v.history()
+    assert len(hist) >= 1
+    assert hist[0].command == "frontmatter"
+
+    # Revert via facade undo
+    res = v.undo()
+    assert res.success
+    assert note_path.read_text(encoding="utf-8") == orig_text
+
+    # Get document object
+    doc = v.get_document(note_path)
+    assert doc.tipo == "Progetto"
+    assert "tipo/progetto" in doc.tags

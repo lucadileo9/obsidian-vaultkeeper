@@ -3,7 +3,7 @@
 import shutil
 import time
 from pathlib import Path
-from typing import List, Optional, Set, Tuple
+from typing import Any, List, Optional, Set, Tuple
 
 from ..exceptions import AttachmentError
 from ..models import OrphanAttachment, VaultCatalog, VaultConfig

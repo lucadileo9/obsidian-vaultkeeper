@@ -5,7 +5,7 @@ import io
 import json
 from dataclasses import asdict, is_dataclass
 from enum import Enum
-from typing import Any, Dict, List, Optional, Sequence, Union
+from typing import Any, List, Optional, Sequence, Union
 
 import yaml
 
