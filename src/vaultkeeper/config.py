@@ -236,6 +236,14 @@ def load_vault_config(
     index_summary_max_chars = int(safe_get("indices.summary_max_chars") or 250)
     include_non_md = bool(safe_get("indices.include_non_md", True))
 
+    # Extract extended lifecycle and history sections
+    archive_path_raw = safe_get("vault.archive_path")
+    archive_path = str(archive_path_raw) if archive_path_raw else None
+    templates_folder = str(safe_get("vault.templates_folder") or "00-09_Meta/02_Template")
+    offload_folder_raw = safe_get("attachments.offload_folder")
+    offload_folder = str(offload_folder_raw) if offload_folder_raw else None
+    max_undo_history = int(safe_get("history.max_transactions") or 100)
+
     return VaultConfig(
         root_path=effective_root,
         allowed_extensions=allowed_extensions,
@@ -260,6 +268,10 @@ def load_vault_config(
         index_prefix=index_prefix,
         index_summary_max_chars=index_summary_max_chars,
         include_non_md_in_indices=include_non_md,
+        archive_path=archive_path,
+        templates_folder=templates_folder,
+        offload_folder=offload_folder,
+        max_undo_history=max_undo_history,
     )
 
 

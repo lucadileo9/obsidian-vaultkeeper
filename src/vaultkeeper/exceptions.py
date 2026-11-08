@@ -46,3 +46,19 @@ class LinkResolutionError(VaultKeeperError):
 
 class AttachmentError(VaultKeeperError):
     """Raised when attachment scanning, soft-deletion, or file moving fails."""
+
+
+class JournalError(VaultKeeperError):
+    """Raised when transaction journaling fails or transaction state is corrupted."""
+
+
+class UndoError(VaultKeeperError):
+    """Raised when an undo operation fails to revert a transaction."""
+
+
+class UndoConflictError(UndoError):
+    """Raised when undo fails because a file was modified externally after the transaction."""
+
+
+class DocumentError(VaultKeeperError):
+    """Raised when parsing or manipulating a MarkdownDocument fails."""
