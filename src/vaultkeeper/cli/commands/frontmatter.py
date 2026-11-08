@@ -10,9 +10,7 @@ from ...core.frontmatter import (
 )
 from ...core.traversal import walk_vault_files
 from ...vault import Vault
-
-EXIT_SUCCESS = 0
-EXIT_ERROR = 1
+from ..constants import EXIT_ERROR, EXIT_SUCCESS
 
 
 def handle_frontmatter(args: Namespace, logger: logging.Logger) -> int:

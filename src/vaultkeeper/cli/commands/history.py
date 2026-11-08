@@ -6,9 +6,7 @@ from typing import Any, Dict, List
 
 from ...utils.formatters import OutputFormat, format_output
 from ...vault import Vault
-
-EXIT_SUCCESS = 0
-EXIT_ERROR = 1
+from ..constants import EXIT_ERROR, EXIT_SUCCESS
 
 
 def handle_history(args: Namespace, logger: logging.Logger) -> int:

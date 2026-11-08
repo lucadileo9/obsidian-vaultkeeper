@@ -6,9 +6,7 @@ from argparse import Namespace
 from ...exceptions import OffloadError, VaultKeeperError
 from ...utils.helpers import format_bytes
 from ...vault import Vault
-
-EXIT_SUCCESS = 0
-EXIT_ERROR = 1
+from ..constants import EXIT_ERROR, EXIT_SUCCESS
 
 
 def handle_offload(args: Namespace, logger: logging.Logger) -> int:

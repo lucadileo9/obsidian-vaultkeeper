@@ -4,9 +4,7 @@ import logging
 from argparse import Namespace
 
 from ...vault import Vault
-
-EXIT_SUCCESS = 0
-EXIT_ERROR = 1
+from ..constants import EXIT_ERROR, EXIT_SUCCESS
 
 
 def handle_indices(args: Namespace, logger: logging.Logger) -> int:

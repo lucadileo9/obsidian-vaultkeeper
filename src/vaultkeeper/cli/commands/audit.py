@@ -6,10 +6,7 @@ from argparse import Namespace
 from pathlib import Path
 
 from ...vault import Vault
-
-EXIT_SUCCESS = 0
-EXIT_ERROR = 1
-EXIT_ISSUES_FOUND = 2
+from ..constants import EXIT_ERROR, EXIT_ISSUES_FOUND, EXIT_SUCCESS
 
 
 def handle_audit(args: Namespace, logger: logging.Logger) -> int:

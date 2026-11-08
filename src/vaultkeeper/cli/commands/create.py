@@ -7,9 +7,7 @@ from typing import List, Optional
 from ...exceptions import CreationError, TaxonomyError, TemplateError, VaultKeeperError
 from ...utils.formatters import format_output, render_markdown_table
 from ...vault import Vault
-
-EXIT_SUCCESS = 0
-EXIT_ERROR = 1
+from ..constants import EXIT_ERROR, EXIT_SUCCESS
 
 
 def handle_create(args: Namespace, logger: logging.Logger) -> int:
