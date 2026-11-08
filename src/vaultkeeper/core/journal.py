@@ -307,19 +307,22 @@ class TransactionJournal:
             raise UndoError(f"Transaction '{record.tx_id}' has already been reverted.")
 
         # Pre-flight check: verify that no files were modified after this transaction
-        for action in record.actions:
+        for idx, action in enumerate(record.actions):
             abs_p = self.root_path / action.path
+            is_last_action_for_path = not any(a.path == action.path for a in record.actions[idx + 1 :])
+
             if action.action_type == "write_content":
                 if not abs_p.is_file():
                     raise UndoConflictError(f"Target file '{action.path}' does not exist for undo verification.")
-                current_hash = compute_content_hash(abs_p.read_text(encoding="utf-8"))
-                if action.hash_after and current_hash != action.hash_after:
-                    raise UndoConflictError(
-                        f"File '{action.path}' was modified after transaction {record.tx_id} "
-                        f"(hash mismatch). Aborting undo to protect recent changes."
-                    )
+                if is_last_action_for_path:
+                    current_hash = compute_content_hash(abs_p.read_text(encoding="utf-8"))
+                    if action.hash_after and current_hash != action.hash_after:
+                        raise UndoConflictError(
+                            f"File '{action.path}' was modified after transaction {record.tx_id} "
+                            f"(hash mismatch). Aborting undo to protect recent changes."
+                        )
             elif action.action_type == "create_file":
-                if abs_p.is_file():
+                if abs_p.is_file() and is_last_action_for_path:
                     current_hash = compute_content_hash(abs_p.read_text(encoding="utf-8"))
                     if action.hash_after and current_hash != action.hash_after:
                         raise UndoConflictError(
@@ -331,7 +334,12 @@ class TransactionJournal:
                     raise UndoConflictError(
                         f"Moved file '{action.target_path}' is missing. Cannot undo move to '{action.path}'."
                     )
-                if abs_p.exists():
+                # If a subsequent action in this transaction created or wrote to abs_p, it will be undone first
+                created_by_tx = any(
+                    a.path == action.path and a.action_type in ("create_file", "write_content")
+                    for a in record.actions[idx + 1 :]
+                )
+                if abs_p.exists() and not created_by_tx:
                     raise UndoConflictError(f"Original location '{action.path}' is already occupied. Cannot undo move.")
 
         affected_files: List[str] = [a.path for a in record.actions]

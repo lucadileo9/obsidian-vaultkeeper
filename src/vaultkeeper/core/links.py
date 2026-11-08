@@ -296,4 +296,3 @@ class WikilinkEngine:
                         note_path.write_text(updated_content, encoding="utf-8")
 
         return total_links
-

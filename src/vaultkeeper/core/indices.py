@@ -278,7 +278,9 @@ class IndexManager:
         """Mark an existing entry in the folder index as (Archiviato)."""
         idx_path = self.get_index_path(folder)
         if not idx_path.is_file():
-            return False
+            self.rebuild_index(folder, transaction=transaction, dry_run=dry_run)
+            if not idx_path.is_file():
+                return not dry_run
 
         try:
             content = idx_path.read_text(encoding="utf-8")
@@ -306,4 +308,3 @@ class IndexManager:
                 idx_path.write_text(new_content, encoding="utf-8")
 
         return True
-

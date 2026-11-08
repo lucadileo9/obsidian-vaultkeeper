@@ -86,9 +86,7 @@ def rename_item(
     norm_stem = normalize_stem(new_stem, config)
     if norm_stem != new_stem:
         new_stem = norm_stem
-        target_filename = (
-            f"{new_stem}{resolved_src.suffix}" if resolved_src.is_file() else new_stem
-        )
+        target_filename = f"{new_stem}{resolved_src.suffix}" if resolved_src.is_file() else new_stem
 
     dest_path = resolved_src.parent / target_filename
     if dest_path == resolved_src:
@@ -122,6 +120,8 @@ def rename_item(
                 "Pass skip_links=True to rename the physical file without rewriting global links."
             )
 
+    is_md = resolved_src.is_file() and resolved_src.suffix.lower() == ".md"
+
     # Physical move/rename
     if not dry_run:
         if transaction:
@@ -129,11 +129,13 @@ def rename_item(
         else:
             resolved_src.rename(dest_path)
 
-    # Update H1 heading inside the note if it matched the old stem
-    if resolved_src.is_file() and resolved_src.suffix.lower() == ".md" and not dry_run:
+    # Update H1 heading inside the note if it matched the old stem (with underscores or spaces)
+    if is_md and not dry_run and dest_path.is_file():
         try:
             content = dest_path.read_text(encoding="utf-8")
-            h1_pattern = re.compile(r"^#\s+" + re.escape(old_stem) + r"\s*$", re.MULTILINE)
+            old_title_spaced = old_stem.replace("_", " ")
+            old_title_regex = f"(?:{re.escape(old_stem)}|{re.escape(old_title_spaced)})"
+            h1_pattern = re.compile(r"^#\s+" + old_title_regex + r"\s*$", re.MULTILINE)
             clean_display_title = new_stem.replace("_", " ")
             updated_h1, h1_count = h1_pattern.subn(f"# {clean_display_title}", content)
             if h1_count > 0:
