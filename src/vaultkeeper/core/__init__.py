@@ -15,6 +15,7 @@ from .frontmatter import (
     read_note,
     update_frontmatter,
 )
+from .graph import GraphTelemetry
 from .indices import (
     IndexManager,
     generate_folder_index_content,
@@ -32,6 +33,7 @@ from .links import (
     resolve_link_target,
     scan_broken_links,
 )
+from .map import VaultMapEngine
 from .naming import (
     batch_normalize,
     normalize_name,
@@ -39,6 +41,8 @@ from .naming import (
     rename_vault_item,
     update_wikilinks_in_content,
 )
+from .search import SearchEngine
+from .taxonomy import TaxonomyEngine
 from .traversal import (
     build_vault_catalog,
     walk_vault_directories,
@@ -76,4 +80,8 @@ __all__ = [
     "TransactionJournal",
     "TransactionContext",
     "MarkdownDocument",
+    "TaxonomyEngine",
+    "SearchEngine",
+    "GraphTelemetry",
+    "VaultMapEngine",
 ]

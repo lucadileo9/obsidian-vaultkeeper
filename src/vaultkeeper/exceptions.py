@@ -74,3 +74,11 @@ class ArchiveError(LifecycleError):
 
 class OffloadError(LifecycleError):
     """Raised when offloading heavy media to cold storage fails."""
+
+
+class SearchError(VaultKeeperError):
+    """Raised when vault search parameters or execution fails."""
+
+
+class ConfigUpdateError(VaultKeeperError):
+    """Raised when updating vault configuration files fails."""

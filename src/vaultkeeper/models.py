@@ -368,3 +368,152 @@ class OffloadResult:
     total_bytes_saved: int
     updated_notes_count: int
     tx_id: Optional[str] = None
+
+
+@dataclass
+class SearchResultItem:
+    """Individual matching note in a search query."""
+
+    file_path: Path
+    rel_path: str
+    title: str
+    tipo: Optional[str]
+    tags: List[str]
+    matched_terms: List[str]
+    snippet: str
+
+
+@dataclass
+class SearchResult:
+    """Outcome of a semantic search operation."""
+
+    query: Optional[str]
+    filters: Dict[str, Any]
+    items: List[SearchResultItem]
+    total_matches: int
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert search results to serializable dictionary."""
+        return {
+            "query": self.query,
+            "filters": self.filters,
+            "total_matches": self.total_matches,
+            "items": [
+                {
+                    "file_path": str(it.file_path),
+                    "rel_path": it.rel_path,
+                    "title": it.title,
+                    "tipo": it.tipo,
+                    "tags": it.tags,
+                    "matched_terms": it.matched_terms,
+                    "snippet": it.snippet,
+                }
+                for it in self.items
+            ],
+        }
+
+
+@dataclass(frozen=True)
+class GraphHub:
+    """High-degree node in the concept graph."""
+
+    stem: str
+    file_path: Path
+    in_degree: int
+    out_degree: int
+
+
+@dataclass
+class GraphHealthReport:
+    """Topological non-punitive graph diagnostics."""
+
+    vault_root: Path
+    timestamp: str
+    total_nodes: int
+    total_edges: int
+    true_orphans: List[str]
+    dead_ends: List[str]
+    top_hubs: List[GraphHub]
+    disconnected_components: List[List[str]]
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert graph report to serializable dictionary."""
+        return {
+            "vault_root": str(self.vault_root),
+            "timestamp": self.timestamp,
+            "total_nodes": self.total_nodes,
+            "total_edges": self.total_edges,
+            "true_orphans_count": len(self.true_orphans),
+            "true_orphans": self.true_orphans,
+            "dead_ends_count": len(self.dead_ends),
+            "dead_ends": self.dead_ends,
+            "top_hubs": [
+                {
+                    "stem": h.stem,
+                    "file_path": str(h.file_path),
+                    "in_degree": h.in_degree,
+                    "out_degree": h.out_degree,
+                }
+                for h in self.top_hubs
+            ],
+            "disconnected_components_count": len(self.disconnected_components),
+            "disconnected_components": self.disconnected_components,
+        }
+
+
+@dataclass
+class AreaSummary:
+    """Johnny.Decimal area metric summary."""
+
+    area_name: str
+    path: Path
+    notes_count: int
+    attachments_count: int
+    total_bytes: int
+    has_index: bool
+    index_path: Optional[Path] = None
+
+
+@dataclass
+class VaultMapReport:
+    """Hierarchical Johnny.Decimal structural map of the vault."""
+
+    vault_root: Path
+    timestamp: str
+    total_notes: int
+    total_attachments: int
+    total_bytes: int
+    areas: List[AreaSummary]
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert vault map to serializable dictionary."""
+        return {
+            "vault_root": str(self.vault_root),
+            "timestamp": self.timestamp,
+            "total_notes": self.total_notes,
+            "total_attachments": self.total_attachments,
+            "total_bytes": self.total_bytes,
+            "areas": [
+                {
+                    "area_name": a.area_name,
+                    "path": str(a.path),
+                    "notes_count": a.notes_count,
+                    "attachments_count": a.attachments_count,
+                    "total_bytes": a.total_bytes,
+                    "has_index": a.has_index,
+                    "index_path": str(a.index_path) if a.index_path else None,
+                }
+                for a in self.areas
+            ],
+        }
+
+
+@dataclass(frozen=True)
+class TagMutationResult:
+    """Outcome of adding or removing a taxonomy tag."""
+
+    tag: str
+    action: str  # "add", "remove"
+    taxonomy_file: Path
+    notes_affected_count: int = 0
+    tx_id: Optional[str] = None

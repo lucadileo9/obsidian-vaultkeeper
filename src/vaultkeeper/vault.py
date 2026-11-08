@@ -1,7 +1,9 @@
 """High-level Vault facade providing pure Python API for all vault operations."""
 
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
+
+from proteus.core import ConfigurationManager
 
 from .config import load_vault_config
 from .core.attachments import (
@@ -17,26 +19,34 @@ from .core.frontmatter import (
     read_note,
     update_frontmatter,
 )
+from .core.graph import GraphTelemetry
 from .core.indices import IndexManager, write_folder_index
 from .core.journal import TransactionJournal
 from .core.lifecycle import archive_item, move_item, offload_media, rename_item
 from .core.links import WikilinkEngine, find_stem_collisions, scan_broken_links
+from .core.map import VaultMapEngine
 from .core.naming import batch_normalize
+from .core.search import SearchEngine
+from .core.taxonomy import TaxonomyEngine
 from .core.traversal import build_vault_catalog, walk_vault_directories
 from .exceptions import FrontmatterError, VaultNotFoundError
 from .models import (
     ArchiveResult,
     AuditReport,
     BrokenLink,
+    GraphHealthReport,
     MoveResult,
     Note,
     OffloadResult,
     OrphanAttachment,
     RenameResult,
+    SearchResult,
+    TagMutationResult,
     TransactionRecord,
     UndoResult,
     VaultCatalog,
     VaultConfig,
+    VaultMapReport,
 )
 
 
@@ -409,3 +419,124 @@ class Vault:
         if res.offloaded_files:
             self.refresh()
         return res
+
+    def tags_show(self, query: Optional[str] = None) -> List[str]:
+        """Return registered taxonomy tags, optionally filtered by search query."""
+        engine = TaxonomyEngine(self.config)
+        return engine.search_tags(query=query)
+
+    def tags_add(
+        self,
+        tag: str,
+        section: Optional[str] = None,
+        dry_run: bool = False,
+    ) -> TagMutationResult:
+        """Add a tag to the controlled taxonomy file in alphabetical order."""
+        engine = TaxonomyEngine(self.config)
+        if dry_run:
+            return engine.add_tag(tag, section=section, dry_run=True)
+
+        with self.journal.begin_transaction("tags", f"Add tag '{tag}' to taxonomy") as tx:
+            res = engine.add_tag(tag, section=section, transaction=tx, dry_run=False)
+
+        self.refresh()
+        return res
+
+    def tags_remove(
+        self,
+        tag: str,
+        force: bool = False,
+        dry_run: bool = False,
+    ) -> TagMutationResult:
+        """Remove a tag from the controlled taxonomy file."""
+        engine = TaxonomyEngine(self.config)
+        if dry_run:
+            return engine.remove_tag(tag, force=force, dry_run=True)
+
+        with self.journal.begin_transaction("tags", f"Remove tag '{tag}' from taxonomy") as tx:
+            res = engine.remove_tag(tag, force=force, transaction=tx, dry_run=False)
+
+        self.refresh()
+        return res
+
+    def config_show(self) -> Dict[str, Any]:
+        """Return the complete active configuration dictionary."""
+        cm = ConfigurationManager()
+        cfg_file = self.root / "vault.toml"
+        if cfg_file.is_file():
+            cm.load(str(cfg_file))
+        return cm.get_all()
+
+    def config_set(self, key: str, value: Any, dry_run: bool = False) -> bool:
+        """Update a configuration directive in vault.toml."""
+        cfg_file = self.root / "vault.toml"
+        cm = ConfigurationManager()
+        if cfg_file.is_file():
+            cm.load(str(cfg_file))
+
+        typed_val: Any = value
+        if isinstance(value, str):
+            if value.lower() in ("true", "yes", "on"):
+                typed_val = True
+            elif value.lower() in ("false", "no", "off"):
+                typed_val = False
+            else:
+                try:
+                    typed_val = int(value)
+                except ValueError:
+                    try:
+                        typed_val = float(value)
+                    except ValueError:
+                        typed_val = value
+
+        cm.set(key, typed_val)
+
+        import tempfile
+
+        tmp_p = Path(tempfile.mktemp(suffix=".toml"))
+        try:
+            cm.save(str(tmp_p))
+            new_content = tmp_p.read_text(encoding="utf-8")
+        finally:
+            if tmp_p.exists():
+                tmp_p.unlink()
+
+        if dry_run:
+            return True
+
+        with self.journal.begin_transaction("config", f"Update {key} = {value}") as tx:
+            tx.write_content(cfg_file, new_content)
+
+        self.config = load_vault_config(root_path=self.root, config_file=cfg_file)
+        self.refresh()
+        return True
+
+    def search(
+        self,
+        query: Optional[str] = None,
+        tag: Optional[str] = None,
+        tipo: Optional[str] = None,
+        links_to: Optional[str] = None,
+        folder: Optional[Union[str, Path]] = None,
+    ) -> SearchResult:
+        """Search notes in the vault matching combined criteria."""
+        engine = SearchEngine(self.config, self.catalog)
+        return engine.search(query=query, tag=tag, tipo=tipo, links_to=links_to, folder=folder)
+
+    def graph_health(self) -> GraphHealthReport:
+        """Execute non-punitive topological graph diagnostics."""
+        telemetry = GraphTelemetry(self.config, self.catalog)
+        return telemetry.analyze()
+
+    def vault_map(
+        self,
+        output_file: Optional[Union[str, Path]] = None,
+    ) -> Tuple[VaultMapReport, Optional[Path]]:
+        """Generate high-level Johnny.Decimal area telemetry and master vault map."""
+        engine = VaultMapEngine(self.config)
+        report = engine.generate_report()
+        out_path: Optional[Path] = None
+        if output_file:
+            out_p = Path(output_file)
+            out_path = engine.write_map_file(output_path=out_p, report=report)
+        return report, out_path
