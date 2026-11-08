@@ -8,16 +8,21 @@ from .. import __version__
 from .commands.archive import handle_archive
 from .commands.attachments import handle_attachments
 from .commands.audit import handle_audit
+from .commands.config import handle_config
 from .commands.disambiguate import handle_disambiguate
 from .commands.frontmatter import handle_frontmatter
+from .commands.graph import handle_graph_health
 from .commands.history import handle_history
 from .commands.indices import handle_indices
 from .commands.init import handle_init
 from .commands.links import handle_links
+from .commands.map import handle_map
 from .commands.move import handle_move
 from .commands.naming import handle_naming
 from .commands.offload import handle_offload
 from .commands.rename import handle_rename
+from .commands.search import handle_search
+from .commands.tags import handle_tags
 from .commands.undo import handle_undo
 from .logging import close_cli_logger, setup_cli_logger
 
@@ -223,6 +228,68 @@ def build_parser() -> argparse.ArgumentParser:
         help="Simulate offloading without moving files.",
     )
 
+    # 15. vk tags
+    tags_parser = subparsers.add_parser("tags", help="Inspect and manipulate controlled tag taxonomy.")
+    tags_subparsers = tags_parser.add_subparsers(dest="tag_action", help="Tag action")
+
+    tags_show_parser = tags_subparsers.add_parser("show", help="List registered taxonomy tags.")
+    tags_show_parser.add_argument("--query", type=str, default=None, help="Filter tags matching search query.")
+    tags_show_parser.add_argument(
+        "--format", type=str, default="md", choices=["md", "json", "yaml", "csv"], help="Output format."
+    )
+
+    tags_add_parser = tags_subparsers.add_parser("add", help="Add a tag into 00_Tassonomia_Tag.md.")
+    tags_add_parser.add_argument("tag", type=str, help="Tag name to add (e.g. area/ricerca).")
+    tags_add_parser.add_argument("--section", type=str, default=None, help="Section heading to insert under.")
+    tags_add_parser.add_argument("--dry-run", action="store_true", help="Simulate tag insertion without saving.")
+
+    tags_rm_parser = tags_subparsers.add_parser("remove", help="Remove a tag from 00_Tassonomia_Tag.md.")
+    tags_rm_parser.add_argument("tag", type=str, help="Tag name to remove.")
+    tags_rm_parser.add_argument("--force", action="store_true", help="Force removal even if referenced in notes.")
+    tags_rm_parser.add_argument("--dry-run", action="store_true", help="Simulate tag removal without saving.")
+
+    # 16. vk config
+    config_parser = subparsers.add_parser("config", help="Inspect and update vault configuration directives.")
+    config_subparsers = config_parser.add_subparsers(dest="config_action", help="Config action")
+
+    config_show_parser = config_subparsers.add_parser("show", help="Display active configuration settings.")
+    config_show_parser.add_argument(
+        "--format", type=str, default="yaml", choices=["yaml", "json", "md"], help="Output format."
+    )
+
+    config_set_parser = config_subparsers.add_parser("set", help="Update a directive in vault.toml.")
+    config_set_parser.add_argument("key", type=str, help="Configuration key path (e.g. naming.style).")
+    config_set_parser.add_argument("value", type=str, help="New value to set.")
+    config_set_parser.add_argument("--dry-run", action="store_true", help="Simulate configuration update.")
+
+    # 17. vk search
+    search_parser = subparsers.add_parser("search", help="Execute semantic query and filter search across notes.")
+    search_parser.add_argument("query", nargs="?", default=None, type=str, help="Optional text search query.")
+    search_parser.add_argument("--tag", type=str, default=None, help="Filter by tag (frontmatter or inline).")
+    search_parser.add_argument("--type", type=str, default=None, help="Filter by note frontmatter tipo.")
+    search_parser.add_argument("--links-to", type=str, default=None, help="Filter notes linking to target stem.")
+    search_parser.add_argument("--folder", type=str, default=None, help="Restrict search to a folder path.")
+    search_parser.add_argument(
+        "--format", type=str, default="md", choices=["md", "json", "yaml", "csv"], help="Output format."
+    )
+
+    # 18. vk graph-health
+    graph_parser = subparsers.add_parser(
+        "graph-health", help="Execute non-punitive topological graph diagnostics."
+    )
+    graph_parser.add_argument(
+        "--format", type=str, default="md", choices=["md", "json", "yaml"], help="Output format."
+    )
+
+    # 19. vk map
+    map_parser = subparsers.add_parser(
+        "map", help="Generate Johnny.Decimal area telemetry and master vault map."
+    )
+    map_parser.add_argument("--output", type=str, default=None, help="Output path for master MOC markdown note.")
+    map_parser.add_argument(
+        "--format", type=str, default="md", choices=["md", "json"], help="Output format."
+    )
+
     return parser
 
 
@@ -258,6 +325,11 @@ def main(argv: Optional[List[str]] = None) -> int:
             "move": handle_move,
             "archive": handle_archive,
             "offload": handle_offload,
+            "tags": handle_tags,
+            "config": handle_config,
+            "search": handle_search,
+            "graph-health": handle_graph_health,
+            "map": handle_map,
         }
 
         handler = command_handlers.get(args.command)
