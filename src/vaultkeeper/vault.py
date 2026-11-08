@@ -11,12 +11,14 @@ from .core.attachments import (
     soft_delete_attachment,
 )
 from .core.audit import run_audit
+from .core.document import MarkdownDocument
 from .core.frontmatter import (
     parse_note_content,
     read_note,
     update_frontmatter,
 )
 from .core.indices import write_folder_index
+from .core.journal import TransactionJournal
 from .core.links import find_stem_collisions, scan_broken_links
 from .core.naming import batch_normalize
 from .core.traversal import build_vault_catalog, walk_vault_directories
@@ -26,6 +28,8 @@ from .models import (
     BrokenLink,
     Note,
     OrphanAttachment,
+    TransactionRecord,
+    UndoResult,
     VaultCatalog,
     VaultConfig,
 )
@@ -47,6 +51,10 @@ class Vault:
         p_cfg = Path(config_file).resolve() if config_file else None
         self.config: VaultConfig = load_vault_config(root_path=p_root, config_file=p_cfg)
         self._catalog: Optional[VaultCatalog] = None
+        self.journal: TransactionJournal = TransactionJournal(
+            self.root,
+            max_transactions=self.config.max_undo_history,
+        )
 
     @property
     def root(self) -> Path:
@@ -105,21 +113,26 @@ class Vault:
         orphans = self.find_orphans(target=target)
         results: List[Tuple[Path, Optional[Path]]] = []
 
-        for orphan in orphans:
-            orig = orphan.file_path
-            if dry_run:
+        if dry_run:
+            for orphan in orphans:
+                orig = orphan.file_path
                 dest = (self.root / self.config.trash_folder / orphan.rel_path) if not hard_delete else None
                 results.append((orig, dest))
-                continue
+            return results
 
-            if hard_delete:
-                hard_delete_attachment(orig)
-                results.append((orig, None))
-            else:
-                dest = soft_delete_attachment(orig, self.root, self.config.trash_folder)
-                results.append((orig, dest))
-
-        if not dry_run and results:
+        if orphans:
+            desc = f"Clean {len(orphans)} orphan attachments ({'hard' if hard_delete else 'soft'} delete)"
+            with self.journal.begin_transaction("clean-attachments", desc) as tx:
+                for orphan in orphans:
+                    orig = orphan.file_path
+                    if hard_delete:
+                        hard_delete_attachment(orig, transaction=tx)
+                        results.append((orig, None))
+                    else:
+                        dest = soft_delete_attachment(
+                            orig, self.root, self.config.trash_folder, transaction=tx
+                        )
+                        results.append((orig, dest))
             self.refresh()
 
         return results
@@ -134,8 +147,19 @@ class Vault:
         Returns list of tuples: (old_path, new_path, updated_links_count)
         """
         target_path = Path(target).resolve() if target else None
-        results = batch_normalize(self.catalog, self.config, target_dir=target_path, dry_run=dry_run)
-        if not dry_run and results:
+        if dry_run:
+            return batch_normalize(self.catalog, self.config, target_dir=target_path, dry_run=True)
+
+        with self.journal.begin_transaction("normalize-names", "Batch normalize vault item names") as tx:
+            results = batch_normalize(
+                self.catalog,
+                self.config,
+                target_dir=target_path,
+                dry_run=False,
+                transaction=tx,
+            )
+
+        if results:
             self.refresh()
         return results
 
@@ -191,7 +215,8 @@ class Vault:
             return False
 
         if not dry_run:
-            note_path.write_text(updated, encoding="utf-8")
+            with self.journal.begin_transaction("frontmatter", f"Set tipo to '{new_type}' in {note_path.name}") as tx:
+                tx.write_content(note_path, updated)
             self.refresh()
 
         return True
@@ -222,7 +247,25 @@ class Vault:
             return False
 
         if not dry_run:
-            note_path.write_text(updated, encoding="utf-8")
+            desc = f"{'Overwrite' if overwrite else 'Add'} tags in {note_path.name}"
+            with self.journal.begin_transaction("frontmatter", desc) as tx:
+                tx.write_content(note_path, updated)
             self.refresh()
 
         return True
+
+    def history(self, limit: int = 20) -> List[TransactionRecord]:
+        """List historical transactions from newest to oldest."""
+        return self.journal.list_transactions(limit=limit)
+
+    def undo(self, tx_id: Optional[str] = None, dry_run: bool = False) -> UndoResult:
+        """Revert a transaction and refresh in-memory catalog."""
+        result = self.journal.undo(tx_id=tx_id, dry_run=dry_run)
+        if result.success and not dry_run:
+            self.refresh()
+        return result
+
+    def get_document(self, file_path: Union[str, Path]) -> MarkdownDocument:
+        """Load and return an object-oriented MarkdownDocument for a note."""
+        p = Path(file_path).resolve()
+        return MarkdownDocument.from_file(p, type_field=self.config.type_field)

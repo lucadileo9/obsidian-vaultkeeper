@@ -117,6 +117,7 @@ def soft_delete_attachment(
     attachment_path: Path,
     vault_root: Path,
     trash_folder_name: str = ".trash",
+    transaction: Optional[Any] = None,
 ) -> Path:
     """Move an attachment into the vault .trash directory preserving relative path structure."""
     if not attachment_path.is_file():
@@ -137,18 +138,27 @@ def soft_delete_attachment(
 
     dest.parent.mkdir(parents=True, exist_ok=True)
     try:
-        shutil.move(str(attachment_path), str(dest))
+        if transaction:
+            transaction.move_file(attachment_path, dest)
+        else:
+            shutil.move(str(attachment_path), str(dest))
     except Exception as exc:
         raise AttachmentError(f"Failed to move file to trash: {attachment_path}", str(exc)) from exc
 
     return dest
 
 
-def hard_delete_attachment(attachment_path: Path) -> None:
+def hard_delete_attachment(
+    attachment_path: Path,
+    transaction: Optional[Any] = None,
+) -> None:
     """Permanently delete an attachment file from disk."""
     if not attachment_path.is_file():
         raise AttachmentError(f"Attachment file not found: {attachment_path}")
     try:
-        attachment_path.unlink()
+        if transaction:
+            transaction.delete_file(attachment_path)
+        else:
+            attachment_path.unlink()
     except Exception as exc:
         raise AttachmentError(f"Failed to delete attachment: {attachment_path}", str(exc)) from exc

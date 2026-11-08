@@ -128,6 +128,7 @@ def rename_vault_item(
     old_path: Path,
     new_name: str,
     dry_run: bool = False,
+    transaction: Optional[Any] = None,
 ) -> Tuple[Path, int]:
     """Rename a file or folder and synchronize all incoming wikilinks.
 
@@ -165,10 +166,16 @@ def rename_vault_item(
         if count > 0:
             total_links_updated += count
             if not dry_run:
-                note_path.write_text(new_content, encoding="utf-8")
+                if transaction:
+                    transaction.write_content(note_path, new_content)
+                else:
+                    note_path.write_text(new_content, encoding="utf-8")
 
     if not dry_run:
-        resolved_old.rename(dest_path)
+        if transaction:
+            transaction.move_file(resolved_old, dest_path)
+        else:
+            resolved_old.rename(dest_path)
 
     return dest_path, total_links_updated
 
@@ -178,6 +185,7 @@ def batch_normalize(
     config: VaultConfig,
     target_dir: Optional[Path] = None,
     dry_run: bool = False,
+    transaction: Optional[Any] = None,
 ) -> List[Tuple[Path, Path, int]]:
     """Scan and normalize all file and directory names in target directory.
 
@@ -197,6 +205,7 @@ def batch_normalize(
                 file_path,
                 norm_fname,
                 dry_run=dry_run,
+                transaction=transaction,
             )
             results.append((file_path, dest, links_cnt))
 
