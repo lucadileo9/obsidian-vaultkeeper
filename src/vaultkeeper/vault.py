@@ -25,15 +25,17 @@ from .core.journal import TransactionJournal
 from .core.lifecycle import archive_item, move_item, offload_media, rename_item
 from .core.links import WikilinkEngine, find_stem_collisions, scan_broken_links
 from .core.map import VaultMapEngine
-from .core.naming import batch_normalize
+from .core.naming import batch_normalize, normalize_stem
 from .core.search import SearchEngine
 from .core.taxonomy import TaxonomyEngine
+from .core.templates import TemplateEngine, resolve_target_folder
 from .core.traversal import build_vault_catalog, walk_vault_directories
-from .exceptions import FrontmatterError, VaultNotFoundError
+from .exceptions import CreationError, FrontmatterError, TaxonomyError, VaultNotFoundError
 from .models import (
     ArchiveResult,
     AuditReport,
     BrokenLink,
+    CreateResult,
     GraphHealthReport,
     MoveResult,
     Note,
@@ -540,3 +542,142 @@ class Vault:
             out_p = Path(output_file)
             out_path = engine.write_map_file(output_path=out_p, report=report)
         return report, out_path
+
+    def create(
+        self,
+        title: str,
+        tipo: str,
+        folder: Optional[Union[str, Path]] = None,
+        tags: Optional[List[str]] = None,
+        template: Optional[str] = None,
+        extra_vars: Optional[Dict[str, Any]] = None,
+        dry_run: bool = False,
+    ) -> CreateResult:
+        """Create a standardized note using templates, strict validation, and folder auto-routing.
+
+        Args:
+            title: Title of the note.
+            tipo: Note classification (e.g. 'Appunto', 'Progetto', 'Contatto', 'Risorsa').
+            folder: Optional folder path. If None, auto-routes via Johnny.Decimal.
+            tags: Optional list of taxonomy tags.
+            template: Optional template name or path.
+            extra_vars: Optional custom interpolation variables.
+            dry_run: If True, simulates creation without modifying filesystem.
+
+        Returns:
+            CreateResult domain model.
+
+        Raises:
+            CreationError: If title is empty, type is disallowed, or stem collision occurs.
+            TaxonomyError: If strict taxonomy is enabled and invalid tags are supplied.
+            TemplateError: If a requested template is not found.
+        """
+        clean_title = title.strip()
+        if not clean_title:
+            raise CreationError("Note title cannot be empty.")
+
+        clean_tipo = tipo.strip()
+        matched_types = [t for t in self.config.allowed_types if t.lower() == clean_tipo.lower()]
+        if not matched_types:
+            raise CreationError(f"Invalid note type '{tipo}'. Allowed types: {', '.join(self.config.allowed_types)}")
+        effective_tipo = matched_types[0]
+
+        cleaned_tags: List[str] = []
+        if tags:
+            for t in tags:
+                for part in t.split(","):
+                    stripped = part.strip().lstrip("#")
+                    if stripped and stripped not in cleaned_tags:
+                        cleaned_tags.append(stripped)
+
+            if self.config.strict_taxonomy:
+                tax_engine = TaxonomyEngine(self.config)
+                for tag in cleaned_tags:
+                    if not tax_engine.is_valid_tag(tag):
+                        raise TaxonomyError(f"Tag '{tag}' is not registered in taxonomy '{self.config.taxonomy_file}'.")
+
+        stem = normalize_stem(clean_title, self.config)
+        if not stem:
+            raise CreationError(f"Normalized stem for title '{title}' is empty.")
+
+        if stem in self.catalog.notes_by_stem and self.catalog.notes_by_stem[stem]:
+            existing_paths = self.catalog.notes_by_stem[stem]
+            first_path = existing_paths[0]
+            try:
+                existing_rel = first_path.relative_to(self.root)
+            except ValueError:
+                existing_rel = first_path
+            raise CreationError(f"Stem collision: a note with stem '{stem}' already exists at '{existing_rel}'.")
+
+        target_folder = resolve_target_folder(self.root, effective_tipo, folder)
+        dest_file = target_folder / f"{stem}.md"
+        if dest_file.exists():
+            raise CreationError(f"File already exists at destination: '{dest_file}'.")
+
+        tmpl_engine = TemplateEngine(self.config)
+        template_used: Optional[str] = None
+        if template:
+            template_path = tmpl_engine.resolve_template_path(template)
+            if template_path and template_path.is_file():
+                raw_tmpl = template_path.read_text(encoding="utf-8")
+                template_used = template_path.name
+            else:
+                raw_tmpl = tmpl_engine.get_default_template(effective_tipo)
+        else:
+            template_path = tmpl_engine.find_template(effective_tipo)
+            if template_path and template_path.is_file():
+                raw_tmpl = template_path.read_text(encoding="utf-8")
+                template_used = template_path.name
+            else:
+                raw_tmpl = tmpl_engine.get_default_template(effective_tipo)
+
+        rendered_content = tmpl_engine.render_template(
+            raw_content=raw_tmpl,
+            title=clean_title,
+            stem=stem,
+            tipo=effective_tipo,
+            tags=cleaned_tags,
+            extra_vars=extra_vars,
+        )
+
+        index_mgr = IndexManager(self.config)
+        expected_idx_path = index_mgr.get_index_path(target_folder)
+        try:
+            rel_path = dest_file.relative_to(self.root)
+        except ValueError:
+            rel_path = dest_file
+
+        if dry_run:
+            return CreateResult(
+                file_path=dest_file,
+                rel_path=rel_path,
+                stem=stem,
+                title=clean_title,
+                tipo=effective_tipo,
+                tags=cleaned_tags,
+                template_used=template_used,
+                index_updated=True,
+                index_path=expected_idx_path,
+                tx_id=None,
+                dry_run=True,
+            )
+
+        with self.journal.begin_transaction("create", f"Create note '{clean_title}' ({dest_file.name})") as tx:
+            target_folder.mkdir(parents=True, exist_ok=True)
+            tx.write_content(dest_file, rendered_content)
+            idx_path, idx_updated = index_mgr.rebuild_index(target_folder, transaction=tx, dry_run=False)
+
+        self.refresh()
+        return CreateResult(
+            file_path=dest_file,
+            rel_path=rel_path,
+            stem=stem,
+            title=clean_title,
+            tipo=effective_tipo,
+            tags=cleaned_tags,
+            template_used=template_used,
+            index_updated=idx_updated,
+            index_path=idx_path,
+            tx_id=tx.tx_id,
+            dry_run=False,
+        )

@@ -9,6 +9,7 @@ from .commands.archive import handle_archive
 from .commands.attachments import handle_attachments
 from .commands.audit import handle_audit
 from .commands.config import handle_config
+from .commands.create import handle_create
 from .commands.disambiguate import handle_disambiguate
 from .commands.frontmatter import handle_frontmatter
 from .commands.graph import handle_graph_health
@@ -282,6 +283,49 @@ def build_parser() -> argparse.ArgumentParser:
     map_parser.add_argument("--output", type=str, default=None, help="Output path for master MOC markdown note.")
     map_parser.add_argument("--format", type=str, default="md", choices=["md", "json"], help="Output format.")
 
+    # 20. vk create
+    create_parser = subparsers.add_parser(
+        "create", help="Create a standardized note using templates, validation, and auto-routing."
+    )
+    create_parser.add_argument("title", type=str, help="Title of the new note.")
+    create_parser.add_argument(
+        "--type",
+        dest="tipo",
+        type=str,
+        required=True,
+        help="Note frontmatter tipo (e.g. Appunto, Progetto, Contatto, Risorsa).",
+    )
+    create_parser.add_argument(
+        "--folder",
+        type=str,
+        default=None,
+        help="Target folder path (relative to vault root or Johnny.Decimal auto-routed).",
+    )
+    create_parser.add_argument(
+        "--tags",
+        type=str,
+        default=None,
+        help="Comma-separated taxonomy tags (e.g. 'tech/python,uni/tesi').",
+    )
+    create_parser.add_argument(
+        "--template",
+        type=str,
+        default=None,
+        help="Template name, filename, or explicit path to instantiate from.",
+    )
+    create_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Simulate creation and index update without modifying disk files.",
+    )
+    create_parser.add_argument(
+        "--format",
+        type=str,
+        default="md",
+        choices=["md", "json", "yaml", "csv"],
+        help="Output format (default: md).",
+    )
+
     return parser
 
 
@@ -322,6 +366,7 @@ def main(argv: Optional[List[str]] = None) -> int:
             "search": handle_search,
             "graph-health": handle_graph_health,
             "map": handle_map,
+            "create": handle_create,
         }
 
         handler = command_handlers.get(args.command)
