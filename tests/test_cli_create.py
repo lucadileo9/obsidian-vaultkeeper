@@ -14,8 +14,8 @@ from vaultkeeper.cli.main import main
 @pytest.fixture
 def cli_vault() -> Iterator[Path]:
     """Create a temporary sandbox vault for CLI create testing."""
-    with tempfile.TemporaryDirectory() as tmp_dir:
-        root = Path(tmp_dir)
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp_dir:
+        root = Path(tmp_dir).resolve()
 
         # 01-09 Meta / System
         meta_dir = root / "01-09_Risorse_Di_Sistema" / "01_Templates"

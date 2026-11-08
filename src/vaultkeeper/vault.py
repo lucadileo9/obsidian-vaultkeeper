@@ -495,7 +495,8 @@ class Vault:
 
         import tempfile
 
-        tmp_p = Path(tempfile.mktemp(suffix=".toml"))
+        with tempfile.NamedTemporaryFile(suffix=".toml", delete=False) as tmp_f:
+            tmp_p = Path(tmp_f.name)
         try:
             cm.save(str(tmp_p))
             new_content = tmp_p.read_text(encoding="utf-8")

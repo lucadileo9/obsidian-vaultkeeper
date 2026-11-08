@@ -161,29 +161,27 @@ class TemplateEngine:
         if not tmpl_dir or not tmpl_dir.is_dir():
             return None
 
-        # Check exact filename / with extension / with Template_ prefix
-        candidates = [
-            tmpl_dir / target,
-            tmpl_dir / f"{target}.md",
-            tmpl_dir / f"Template_{target}.md",
-        ]
-        for c in candidates:
-            if c.is_file():
-                return c
+        # Inspect real directory entries to preserve authentic filesystem casing
+        actual_files = [p for p in tmpl_dir.glob("*.md") if not p.name.startswith(".")]
 
-        # Case-insensitive stem matching
+        # 1. Exact case match
+        for p in actual_files:
+            if p.name == target or p.name == f"{target}.md" or p.name == f"Template_{target}.md":
+                return p.resolve()
+
+        # 2. Case-insensitive stem matching
         target_lower = target.lower()
         if target_lower.endswith(".md"):
             target_lower = target_lower[:-3]
 
-        for p in tmpl_dir.glob("*.md"):
+        for p in actual_files:
             p_stem_lower = p.stem.lower()
             if (
                 p_stem_lower == target_lower
                 or p_stem_lower == f"template_{target_lower}"
                 or p.name.lower() == f"{target_lower}.md"
             ):
-                return p
+                return p.resolve()
 
         return None
 

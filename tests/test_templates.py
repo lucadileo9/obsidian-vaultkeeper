@@ -16,8 +16,8 @@ from vaultkeeper.vault import Vault
 @pytest.fixture
 def temp_vault() -> Iterator[Path]:
     """Create a temporary sandbox vault directory tree with Johnny.Decimal folders."""
-    with tempfile.TemporaryDirectory() as tmp_dir:
-        root = Path(tmp_dir)
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp_dir:
+        root = Path(tmp_dir).resolve()
 
         # 01-09 Meta / System
         meta_dir = root / "01-09_Risorse_Di_Sistema" / "01_Templates"
@@ -186,7 +186,7 @@ def test_resolve_target_folder(temp_vault: Path) -> None:
 
     # Custom valid folder
     f_custom = resolve_target_folder(temp_vault, "Appunto", custom_folder="10-19_Progetti")
-    assert f_custom == temp_vault / "10-19_Progetti"
+    assert f_custom == (temp_vault / "10-19_Progetti").resolve()
 
     # Custom folder outside vault raises CreationError
     with pytest.raises(CreationError):
@@ -313,7 +313,7 @@ def test_template_engine_additional_edge_cases(temp_vault: Path) -> None:
     engine = TemplateEngine(config)
 
     # Explicit relative and absolute path
-    tmpl_abs = temp_vault / "01-09_Risorse_Di_Sistema" / "01_Templates" / "Template_Progetto.md"
+    tmpl_abs = (temp_vault / "01-09_Risorse_Di_Sistema" / "01_Templates" / "Template_Progetto.md").resolve()
     assert engine.find_template(str(tmpl_abs)) == tmpl_abs
     assert engine.find_template("01-09_Risorse_Di_Sistema/01_Templates/Template_Progetto.md") == tmpl_abs
 
@@ -329,8 +329,8 @@ def test_template_engine_additional_edge_cases(temp_vault: Path) -> None:
     assert "tipo: Sistema" in rendered
 
     # Fallback routing when no Johnny.Decimal folders exist
-    with tempfile.TemporaryDirectory() as empty_dir:
-        empty_root = Path(empty_dir)
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as empty_dir:
+        empty_root = Path(empty_dir).resolve()
         f_fallback = resolve_target_folder(empty_root, "Progetto")
         assert f_fallback == empty_root
 
@@ -354,6 +354,6 @@ def test_vault_create_in_custom_folder(temp_vault: Path) -> None:
     )
 
     assert res.file_path.is_file()
-    assert res.file_path.parent == temp_vault / "20-29_Istruzione" / "Informatica"
+    assert res.file_path.parent == (temp_vault / "20-29_Istruzione" / "Informatica").resolve()
     assert res.stem == "Architettura_Microservizi"
-    assert (temp_vault / "20-29_Istruzione" / "Informatica" / "00_Indice_Informatica.md").is_file()
+    assert (temp_vault / "20-29_Istruzione" / "Informatica" / "00_Indice_Informatica.md").resolve().is_file()
