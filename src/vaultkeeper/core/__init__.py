@@ -43,6 +43,7 @@ from .naming import (
 )
 from .search import SearchEngine
 from .taxonomy import TaxonomyEngine
+from .templates import TemplateEngine, resolve_target_folder
 from .traversal import (
     build_vault_catalog,
     walk_vault_directories,
@@ -84,4 +85,6 @@ __all__ = [
     "SearchEngine",
     "GraphTelemetry",
     "VaultMapEngine",
+    "TemplateEngine",
+    "resolve_target_folder",
 ]

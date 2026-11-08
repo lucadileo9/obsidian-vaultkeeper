@@ -308,3 +308,51 @@ class IndexManager:
                 idx_path.write_text(new_content, encoding="utf-8")
 
         return True
+
+    def add_entry(
+        self,
+        folder: Path,
+        stem: str,
+        title: Optional[str] = None,
+        summary: Optional[str] = None,
+        transaction: Optional[Any] = None,
+        dry_run: bool = False,
+    ) -> bool:
+        """Add or synchronize an entry in the folder index."""
+        _, changed = self.rebuild_index(folder, transaction=transaction, dry_run=dry_run)
+        return changed
+
+    def remove_entry(
+        self,
+        folder: Path,
+        stem: str,
+        transaction: Optional[Any] = None,
+        dry_run: bool = False,
+    ) -> bool:
+        """Remove a note entry from the folder index."""
+        idx_path = self.get_index_path(folder)
+        if not idx_path.is_file():
+            return False
+
+        try:
+            content = idx_path.read_text(encoding="utf-8")
+        except Exception:
+            return False
+
+        import re
+
+        pattern = re.compile(
+            r"^[ \t]*[-*]\s*\[\[" + re.escape(stem) + r"(?:#[^\]|]*)?(?:\|[^\]]*)?\]\].*\n?",
+            re.MULTILINE,
+        )
+        new_content, count = pattern.subn("", content)
+        if count == 0:
+            return False
+
+        if not dry_run:
+            if transaction:
+                transaction.write_content(idx_path, new_content)
+            else:
+                idx_path.write_text(new_content, encoding="utf-8")
+
+        return True

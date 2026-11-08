@@ -517,3 +517,36 @@ class TagMutationResult:
     taxonomy_file: Path
     notes_affected_count: int = 0
     tx_id: Optional[str] = None
+
+
+@dataclass(frozen=True)
+class CreateResult:
+    """Outcome of creating a standardized note from a template."""
+
+    file_path: Path
+    rel_path: Path
+    stem: str
+    title: str
+    tipo: str
+    tags: List[str]
+    template_used: Optional[str]
+    index_updated: bool
+    index_path: Optional[Path] = None
+    tx_id: Optional[str] = None
+    dry_run: bool = False
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert creation result to serializable dictionary."""
+        return {
+            "file_path": str(self.file_path),
+            "rel_path": str(self.rel_path),
+            "stem": self.stem,
+            "title": self.title,
+            "tipo": self.tipo,
+            "tags": list(self.tags),
+            "template_used": self.template_used,
+            "index_updated": self.index_updated,
+            "index_path": str(self.index_path) if self.index_path else None,
+            "tx_id": self.tx_id,
+            "dry_run": self.dry_run,
+        }

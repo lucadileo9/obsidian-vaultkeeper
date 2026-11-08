@@ -82,3 +82,11 @@ class SearchError(VaultKeeperError):
 
 class ConfigUpdateError(VaultKeeperError):
     """Raised when updating vault configuration files fails."""
+
+
+class TemplateError(VaultKeeperError):
+    """Raised when template resolution, parsing, or variable interpolation fails."""
+
+
+class CreationError(VaultKeeperError):
+    """Raised when note creation fails due to collisions or validation errors."""
