@@ -16,6 +16,7 @@ from .frontmatter import (
     update_frontmatter,
 )
 from .indices import (
+    IndexManager,
     generate_folder_index_content,
     get_index_filename_for_folder,
     write_folder_index,
@@ -25,6 +26,7 @@ from .journal import (
     TransactionJournal,
 )
 from .links import (
+    WikilinkEngine,
     find_all_links_in_content,
     find_stem_collisions,
     resolve_link_target,
@@ -56,6 +58,7 @@ __all__ = [
     "find_all_links_in_content",
     "scan_broken_links",
     "find_stem_collisions",
+    "WikilinkEngine",
     "find_orphan_attachments",
     "find_heavy_files",
     "soft_delete_attachment",
@@ -68,6 +71,7 @@ __all__ = [
     "get_index_filename_for_folder",
     "generate_folder_index_content",
     "write_folder_index",
+    "IndexManager",
     "run_audit",
     "TransactionJournal",
     "TransactionContext",

@@ -3,7 +3,7 @@
 import re
 import urllib.parse
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from ..models import BrokenLink, VaultCatalog, VaultConfig
 from .traversal import walk_vault_files
@@ -190,3 +190,110 @@ def scan_broken_links(
 def find_stem_collisions(catalog: VaultCatalog) -> Dict[str, List[Path]]:
     """Return dictionary of note stems that exist in multiple locations."""
     return {stem: paths for stem, paths in catalog.notes_by_stem.items() if len(paths) > 1}
+
+
+class WikilinkEngine:
+    """Unified engine for parsing, extracting, and refactoring wikilinks across the vault."""
+
+    def __init__(self, config: VaultConfig) -> None:
+        self.config = config
+
+    def extract_links(
+        self,
+        content: str,
+        source_file: Path,
+    ) -> List[Tuple[int, str, str, Optional[str], Optional[str], bool]]:
+        """Extract all links from markdown content."""
+        return find_all_links_in_content(content, source_file)
+
+    def replace_wikilink_target(
+        self,
+        content: str,
+        old_target: str,
+        new_target: str,
+    ) -> Tuple[str, int]:
+        """Replace occurrences of a target stem in wikilinks and markdown links."""
+        escaped_old = re.escape(old_target)
+        count = 0
+
+        # 1. Wikilinks: [[Old_Target#Anchor|Alias]] -> [[New_Target#Anchor|Alias]]
+        wiki_pattern = re.compile(r"(!?\[\[)" + escaped_old + r"((?:#[^\]|]*)?)((?:\|[^\]]*)?)(\]\])")
+
+        def repl_wiki(m: re.Match) -> str:
+            nonlocal count
+            count += 1
+            return f"{m.group(1)}{new_target}{m.group(2)}{m.group(3)}{m.group(4)}"
+
+        new_content = wiki_pattern.sub(repl_wiki, content)
+
+        # 2. Markdown Links: [Text](path/Old_Target.md) -> [Text](path/New_Target.md)
+        md_pattern = re.compile(
+            r"(!?\[[^\]]*\]\()([^\)\n]*?)(?:\b|\b(?<=[/_]))" + escaped_old + r"(\.md|\b)([^\)\n]*\))"
+        )
+
+        def repl_md(m: re.Match) -> str:
+            nonlocal count
+            count += 1
+            return f"{m.group(1)}{m.group(2)}{new_target}{m.group(3)}{m.group(4)}"
+
+        new_content = md_pattern.sub(repl_md, new_content)
+        return new_content, count
+
+    def replace_embed_with_link(
+        self,
+        content: str,
+        filename: str,
+        external_url: str,
+        callout_label: str = "Allegato archiviato su storage freddo",
+    ) -> Tuple[str, int]:
+        """Replace media embed syntax ![[File.ext]] with a callout external link."""
+        escaped_name = re.escape(filename)
+        count = 0
+
+        # Match ![[Filename]] or ![[Filename|Alias]]
+        pattern = re.compile(r"(!\[\[" + escaped_name + r"(?:\|[^\]]*)?\]\])")
+
+        def repl(m: re.Match) -> str:
+            nonlocal count
+            count += 1
+            return f"> [!INFO] {callout_label}:\n> [{filename}]({external_url})"
+
+        new_content = pattern.sub(repl, content)
+
+        # Also match standard markdown embed ![Alias](...Filename)
+        pattern_md = re.compile(r"(!\[[^\]]*\]\([^\)\n]*" + escaped_name + r"\))")
+
+        def repl_md(m: re.Match) -> str:
+            nonlocal count
+            count += 1
+            return f"> [!INFO] {callout_label}:\n> [{filename}]({external_url})"
+
+        new_content = pattern_md.sub(repl_md, new_content)
+        return new_content, count
+
+    def refactor_in_vault(
+        self,
+        old_stem: str,
+        new_stem: str,
+        transaction: Optional[Any] = None,
+        dry_run: bool = False,
+    ) -> int:
+        """Scan and refactor all wikilinks pointing to old_stem across all vault notes."""
+        total_links = 0
+        for note_path in walk_vault_files(self.config, target_dir=self.config.root_path, extensions={".md"}):
+            try:
+                content = note_path.read_text(encoding="utf-8")
+            except Exception:
+                continue
+
+            updated_content, count = self.replace_wikilink_target(content, old_stem, new_stem)
+            if count > 0:
+                total_links += count
+                if not dry_run:
+                    if transaction:
+                        transaction.write_content(note_path, updated_content)
+                    else:
+                        note_path.write_text(updated_content, encoding="utf-8")
+
+        return total_links
+

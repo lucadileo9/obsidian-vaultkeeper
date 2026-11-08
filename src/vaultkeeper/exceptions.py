@@ -62,3 +62,15 @@ class UndoConflictError(UndoError):
 
 class DocumentError(VaultKeeperError):
     """Raised when parsing or manipulating a MarkdownDocument fails."""
+
+
+class LifecycleError(VaultKeeperError):
+    """Raised when vault item renaming, moving, or refactoring fails."""
+
+
+class ArchiveError(LifecycleError):
+    """Raised when archiving a note or project fails."""
+
+
+class OffloadError(LifecycleError):
+    """Raised when offloading heavy media to cold storage fails."""

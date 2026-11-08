@@ -6,7 +6,7 @@ the core computation engine and the CLI presentation layer.
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 
 @dataclass(frozen=True)
@@ -325,3 +325,46 @@ class UndoResult:
     reverted_actions: int
     message: str
     affected_files: List[str] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
+class RenameResult:
+    """Outcome of a vk rename operation."""
+
+    old_path: Path
+    new_path: Path
+    updated_links_count: int
+    index_updated: bool
+    tx_id: Optional[str] = None
+
+
+@dataclass(frozen=True)
+class MoveResult:
+    """Outcome of a vk move operation."""
+
+    source_path: Path
+    dest_path: Path
+    old_index_updated: bool
+    new_index_updated: bool
+    tx_id: Optional[str] = None
+
+
+@dataclass(frozen=True)
+class ArchiveResult:
+    """Outcome of a vk archive operation."""
+
+    source_path: Path
+    archive_path: Path
+    tombstone_created: bool
+    summary: str
+    tx_id: Optional[str] = None
+
+
+@dataclass(frozen=True)
+class OffloadResult:
+    """Outcome of a vk offload operation."""
+
+    offloaded_files: List[Tuple[Path, Path, int]]  # (source, dest, size_bytes)
+    total_bytes_saved: int
+    updated_notes_count: int
+    tx_id: Optional[str] = None
