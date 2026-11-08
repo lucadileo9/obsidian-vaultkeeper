@@ -93,3 +93,36 @@ Nei Second Brain organizzati con note indice tradizionali chiamate `00_Indice.md
 2. **Ordinamento Naturale:** Il prefisso numerico `00_` mantiene il file permanentemente in cima all'elenco dei file nella barra laterale di Obsidian.
 3. **Stem Univoco Globale:** La nota puo' essere citata ovunque nel Vault con un wikilink sintetico ed inequivocabile: `[[00_Indice_Progetti]]`.
 4. **Zero Collisioni:** Elimina alla radice le collisioni nel Quick Switcher e nei grafi di relazione.
+
+---
+
+## 6. Architettura DRY e Motori Condivisi (`vaultkeeper.core.*`)
+
+Per evitare la duplicazione del codice e centralizzare le operazioni critiche del filesystem, l'architettura implementa 6 motori condivisi:
+
+1. **`TransactionJournal` (`vaultkeeper.core.journal`):**
+   Gestisce le transazioni sul filesystem tramite context manager (`with TransactionContext(...) as tx`). Registra le azioni inverse in formato compresso `.vaultkeeper/history/<tx_id>.json.gz`, consentendo il rollback automatico in caso di errore o tramite il comando CLI `vk undo`.
+2. **`IndexManager` (`vaultkeeper.core.indices`):**
+   Unifica tutte le mutazioni delle voci nei file `00_Indice_<Cartella>.md` (`add_entry`, `remove_entry`, `rename_entry`, `mark_archived`).
+3. **`WikilinkEngine` (`vaultkeeper.core.links`):**
+   Regola universale di matching e sostituzione per wikilink semplici, con ancore (`#`), con alias (`|`) e link Markdown standard.
+4. **`TaxonomyEngine` (`vaultkeeper.core.taxonomy`):**
+   Punto di accesso unico per la lettura, validazione, inserimento e rimozione sicura dei tag in `00_Tassonomia_Tag.md`.
+5. **`MarkdownDocument` (`vaultkeeper.models.document`):**
+   Astrazione a oggetti per i file `.md` che incapsula la manipolazione del frontmatter YAML e del corpo del testo.
+6. **`OutputFormatter` (`vaultkeeper.utils.formatters`):**
+   Serializzatore polimorfico che converte i modelli di dominio nei formati `md` (default), `json`, `yaml` e `csv`.
+
+---
+
+## 7. Modello di Reversibilita' e Undo (Memento Pattern)
+
+Ogni operazione mutante sul Vault genera un record di transazione atomica memorizzato in `.vaultkeeper/history/<tx_id>.json.gz`:
+- **Proprietà di Transazione:** `tx_id`, `timestamp`, `command`, `actions` (elenco delle azioni con `original_path`, `new_path`, `content_before`, `content_after`, `content_hash`).
+- **Verifica di Consistenza:** All'atto dell'invocazione di `vk undo`, il sistema confronta l'hash attuale del file con `content_after`. Se il file è stato manomesso manualmente a posteriori, l'annullamento segnala il conflitto prevenendo perdite accidentali di dati.
+- **Politica di Conservazione:** Mantenimento automatico delle ultime 100 transazioni per un ingombro tipico su storage inferiore a 2 MB.
+
+---
+
+## 8. Relazione con la Roadmap
+Per il piano dettagliato di implementazione a milestone e la suddivisione operativa dei componenti, consultare [ROADMAP.md](../ROADMAP.md).
