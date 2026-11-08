@@ -19,6 +19,10 @@ from .indices import (
     get_index_filename_for_folder,
     write_folder_index,
 )
+from .journal import (
+    TransactionContext,
+    TransactionJournal,
+)
 from .links import (
     find_all_links_in_content,
     find_stem_collisions,
@@ -64,4 +68,6 @@ __all__ = [
     "generate_folder_index_content",
     "write_folder_index",
     "run_audit",
+    "TransactionJournal",
+    "TransactionContext",
 ]
