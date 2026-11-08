@@ -5,6 +5,7 @@ import sys
 from typing import List, Optional
 
 from .. import __version__
+from .commands.archive import handle_archive
 from .commands.attachments import handle_attachments
 from .commands.audit import handle_audit
 from .commands.disambiguate import handle_disambiguate
@@ -13,7 +14,10 @@ from .commands.history import handle_history
 from .commands.indices import handle_indices
 from .commands.init import handle_init
 from .commands.links import handle_links
+from .commands.move import handle_move
 from .commands.naming import handle_naming
+from .commands.offload import handle_offload
+from .commands.rename import handle_rename
 from .commands.undo import handle_undo
 from .logging import close_cli_logger, setup_cli_logger
 
@@ -159,6 +163,66 @@ def build_parser() -> argparse.ArgumentParser:
     )
     undo_parser.add_argument("--dry-run", action="store_true", help="Preview undo actions without modifying files.")
 
+    # 11. vk rename
+    rename_parser = subparsers.add_parser("rename", help="Rename a note or asset with global wikilink refactoring.")
+    rename_parser.add_argument("file", type=str, help="Path of the file to rename.")
+    rename_parser.add_argument("new_name", type=str, help="New file name or stem.")
+    rename_parser.add_argument(
+        "--skip-links",
+        action="store_true",
+        help="Skip refactoring incoming wikilinks across other notes.",
+    )
+    rename_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Simulate rename and refactoring without modifying files.",
+    )
+
+    # 12. vk move
+    move_parser = subparsers.add_parser(
+        "move", help="Move a note or folder into a different directory and update indices."
+    )
+    move_parser.add_argument("target", type=str, help="Path of the file or folder to move.")
+    move_parser.add_argument("destination", type=str, help="Destination directory path.")
+    move_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Simulate move without altering filesystem.",
+    )
+
+    # 13. vk archive
+    archive_parser = subparsers.add_parser(
+        "archive", help="Archive a note or project to mirror cold storage with Tombstone support."
+    )
+    archive_parser.add_argument("target", type=str, help="Path of the file or directory to archive.")
+    archive_parser.add_argument(
+        "--no-tombstone",
+        action="store_true",
+        help="Do not create a tombstone note in the active vault.",
+    )
+    archive_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Simulate archiving without moving files.",
+    )
+
+    # 14. vk offload
+    offload_parser = subparsers.add_parser(
+        "offload", help="Offload heavy binary assets to cold storage and replace embeds with external links."
+    )
+    offload_parser.add_argument(
+        "target",
+        nargs="?",
+        default=None,
+        type=str,
+        help="Specific file or directory to offload (default: all files exceeding threshold).",
+    )
+    offload_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Simulate offloading without moving files.",
+    )
+
     return parser
 
 
@@ -190,6 +254,10 @@ def main(argv: Optional[List[str]] = None) -> int:
             "disambiguate": handle_disambiguate,
             "history": handle_history,
             "undo": handle_undo,
+            "rename": handle_rename,
+            "move": handle_move,
+            "archive": handle_archive,
+            "offload": handle_offload,
         }
 
         handler = command_handlers.get(args.command)
