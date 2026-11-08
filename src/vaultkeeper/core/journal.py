@@ -35,7 +35,7 @@ class TransactionContext:
         self.description = description
         now = datetime.now(timezone.utc)
         short_id = uuid.uuid4().hex[:6]
-        self.tx_id = f"tx_{now.strftime('%Y%m%d_%H%M%S')}_{short_id}"
+        self.tx_id = f"tx_{now.strftime('%Y%m%d_%H%M%S_%f')}_{short_id}"
         self.timestamp = now.isoformat()
         self.actions: List[ActionRecord] = []
         self.active: bool = False
@@ -264,11 +264,12 @@ class TransactionJournal:
 
         files = sorted(self.history_dir.glob("*.json.gz"), reverse=True)
         records: List[TransactionRecord] = []
-        for file in files[:limit]:
+        for file in files:
             record = self._load_record_file(file)
             if record:
                 records.append(record)
-        return records
+        records.sort(key=lambda r: (r.timestamp, r.tx_id), reverse=True)
+        return records[:limit]
 
     def _load_record_file(self, path: Path) -> Optional[TransactionRecord]:
         """Load and deserialize a single transaction file."""

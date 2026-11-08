@@ -28,9 +28,7 @@ class VaultMapEngine:
             [
                 d
                 for d in self.config.root_path.iterdir()
-                if d.is_dir()
-                and d.name not in self.config.ignored_folders
-                and not d.name.startswith(".")
+                if d.is_dir() and d.name not in self.config.ignored_folders and not d.name.startswith(".")
             ],
             key=lambda p: p.name,
         )

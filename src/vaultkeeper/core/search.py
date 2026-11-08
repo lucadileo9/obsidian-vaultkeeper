@@ -50,8 +50,12 @@ class SearchEngine:
         items: List[SearchResultItem] = []
 
         scan_dir = folder_filter_p if folder_filter_p and folder_filter_p.is_dir() else self.config.root_path
+        tax_name = Path(self.config.taxonomy_file or "00_Tassonomia_Tag.md").name
 
         for note_path in walk_vault_files(self.config, target_dir=scan_dir, extensions={".md"}):
+            if note_path.name == tax_name:
+                continue
+
             if folder_filter_p and not note_path.is_relative_to(folder_filter_p):
                 continue
 
@@ -88,8 +92,7 @@ class SearchEngine:
             if clean_links_to:
                 links = self.link_engine.extract_links(content, note_path)
                 has_link = any(
-                    Path(clean_target).stem.lower() == clean_links_to.lower()
-                    for _, _, clean_target, _, _, _ in links
+                    Path(clean_target).stem.lower() == clean_links_to.lower() for _, _, clean_target, _, _, _ in links
                 )
                 if not has_link:
                     continue

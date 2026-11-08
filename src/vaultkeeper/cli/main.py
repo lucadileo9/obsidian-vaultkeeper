@@ -274,21 +274,13 @@ def build_parser() -> argparse.ArgumentParser:
     )
 
     # 18. vk graph-health
-    graph_parser = subparsers.add_parser(
-        "graph-health", help="Execute non-punitive topological graph diagnostics."
-    )
-    graph_parser.add_argument(
-        "--format", type=str, default="md", choices=["md", "json", "yaml"], help="Output format."
-    )
+    graph_parser = subparsers.add_parser("graph-health", help="Execute non-punitive topological graph diagnostics.")
+    graph_parser.add_argument("--format", type=str, default="md", choices=["md", "json", "yaml"], help="Output format.")
 
     # 19. vk map
-    map_parser = subparsers.add_parser(
-        "map", help="Generate Johnny.Decimal area telemetry and master vault map."
-    )
+    map_parser = subparsers.add_parser("map", help="Generate Johnny.Decimal area telemetry and master vault map.")
     map_parser.add_argument("--output", type=str, default=None, help="Output path for master MOC markdown note.")
-    map_parser.add_argument(
-        "--format", type=str, default="md", choices=["md", "json"], help="Output format."
-    )
+    map_parser.add_argument("--format", type=str, default="md", choices=["md", "json"], help="Output format.")
 
     return parser
 

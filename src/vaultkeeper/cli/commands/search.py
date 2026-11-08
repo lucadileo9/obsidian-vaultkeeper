@@ -47,13 +47,15 @@ def handle_search(args: Namespace, logger: logging.Logger) -> int:
         rows = []
         for it in res.items:
             tags_str = ", ".join(f"#{t}" for t in it.tags[:3])
-            rows.append({
-                "Nota": f"[[{Path(it.rel_path).stem}|{it.title}]]",
-                "Percorso": it.rel_path,
-                "Tipo": it.tipo or "-",
-                "Tag": tags_str or "-",
-                "Estratto": it.snippet or "-",
-            })
+            rows.append(
+                {
+                    "Nota": f"[[{Path(it.rel_path).stem}|{it.title}]]",
+                    "Percorso": it.rel_path,
+                    "Tipo": it.tipo or "-",
+                    "Tag": tags_str or "-",
+                    "Estratto": it.snippet or "-",
+                }
+            )
 
         title = f"Risultati Ricerca ({res.total_matches} note trovate)"
         rendered = format_output(
