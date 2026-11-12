@@ -174,6 +174,185 @@ def rename_item(
     )
 
 
+def batch_rename_items(
+    catalog: VaultCatalog,
+    config: VaultConfig,
+    index_manager: IndexManager,
+    wikilink_engine: WikilinkEngine,
+    mapping: Dict[Union[str, Path], str],
+    skip_links: bool = False,
+    transaction: Optional[Any] = None,
+    dry_run: bool = False,
+) -> List[RenameResult]:
+    """Execute batch rename of multiple items with strict All-or-Nothing preflight validation.
+
+    Args:
+        catalog: In-memory VaultCatalog for collision and stem resolution.
+        config: Vault configuration schema.
+        index_manager: IndexManager for MOC updates.
+        wikilink_engine: WikilinkEngine for cross-vault backlink refactoring.
+        mapping: Dictionary mapping source paths to new stems or filenames.
+        skip_links: If True, skips global wikilink refactoring.
+        transaction: Optional active TransactionContext.
+        dry_run: If True, simulates renames without altering disk.
+
+    Returns:
+        List of RenameResult domain models.
+
+    Raises:
+        NamingError: If any preflight validation fails (missing source, stem collisions,
+                     destination collision, or ambiguous source stems).
+    """
+    if not mapping:
+        raise NamingError("Batch rename mapping cannot be empty.")
+
+    root_resolved = config.root_path.resolve()
+    validated_renames: List[Tuple[Path, Path, str, str]] = []  # (src_p, dest_p, old_stem, new_stem)
+    dest_paths_set: Set[Path] = set()
+    new_stems_set: Set[str] = set()
+
+    # Pre-flight Check Phase (Strict All-or-Nothing)
+    sources_being_renamed = {
+        (root_resolved / Path(s) if not Path(s).is_absolute() else Path(s)).resolve()
+        for s in mapping.keys()
+    }
+
+    for src_raw, new_name in mapping.items():
+        src_raw_p = Path(src_raw)
+        src_p = (root_resolved / src_raw_p if not src_raw_p.is_absolute() else src_raw_p).resolve()
+
+        if not src_p.exists():
+            raise NamingError(f"Batch rename failed pre-flight: Source file does not exist: '{src_raw}'")
+
+        if src_p.is_file():
+            if Path(new_name).suffix == src_p.suffix:
+                new_stem = Path(new_name).stem
+                target_filename = new_name
+            else:
+                new_stem = new_name
+                target_filename = f"{new_name}{src_p.suffix}"
+        else:
+            new_stem = new_name
+            target_filename = new_name
+
+        norm_stem = normalize_stem(new_stem, config)
+        if norm_stem != new_stem:
+            new_stem = norm_stem
+            target_filename = f"{new_stem}{src_p.suffix}" if src_p.is_file() else new_stem
+
+        dest_path = src_p.parent / target_filename
+
+        # Intra-batch destination collisions
+        if dest_path in dest_paths_set:
+            raise NamingError(
+                f"Batch rename failed pre-flight: Multiple items map to same destination: '{dest_path.name}'"
+            )
+        dest_paths_set.add(dest_path)
+
+        # Intra-batch target stem collisions
+        if new_stem in new_stems_set and dest_path != src_p:
+            raise NamingError(
+                f"Batch rename failed pre-flight: Duplicate target stem '{new_stem}' within batch."
+            )
+        new_stems_set.add(new_stem)
+
+        # Disk destination collision
+        if dest_path.exists() and dest_path != src_p:
+            if dest_path not in sources_being_renamed:
+                raise NamingError(f"Batch rename failed pre-flight: Destination already exists: '{dest_path}'")
+
+        # Vault-wide stem collision
+        if new_stem in catalog.notes_by_stem and dest_path != src_p:
+            colliding = [p for p in catalog.notes_by_stem[new_stem] if p.resolve() != src_p]
+            truly_colliding = [p for p in colliding if p.resolve() not in sources_being_renamed]
+            if truly_colliding:
+                raise NamingError(
+                    f"Batch rename failed pre-flight: Stem collision for target stem '{new_stem}' at '{truly_colliding[0].as_posix()}'"
+                )
+
+        # Ambiguous source stem
+        old_stem = src_p.stem
+        if old_stem in catalog.notes_by_stem and len(catalog.notes_by_stem[old_stem]) > 1:
+            if not skip_links:
+                raise NamingError(
+                    f"Batch rename failed pre-flight: Ambiguous source stem '{old_stem}'. "
+                    "Multiple notes share this stem. Pass skip_links=True to bypass."
+                )
+
+        validated_renames.append((src_p, dest_path, old_stem, new_stem))
+
+    # Execution Phase
+    results: List[RenameResult] = []
+    affected_folders: Set[Path] = set()
+
+    for src_p, dest_path, old_stem, new_stem in validated_renames:
+        if src_p == dest_path:
+            results.append(
+                RenameResult(
+                    old_path=src_p,
+                    new_path=dest_path,
+                    updated_links_count=0,
+                    index_updated=False,
+                    tx_id=getattr(transaction, "tx_id", None),
+                )
+            )
+            continue
+
+        is_md = src_p.is_file() and src_p.suffix.lower() == ".md"
+
+        if not dry_run:
+            if transaction:
+                transaction.move_file(src_p, dest_path)
+            else:
+                src_p.rename(dest_path)
+
+        # Update H1 heading in Markdown note
+        if is_md and not dry_run and dest_path.is_file():
+            try:
+                content = dest_path.read_text(encoding="utf-8")
+                old_title_spaced = old_stem.replace("_", " ")
+                old_title_regex = f"(?:{re.escape(old_stem)}|{re.escape(old_title_spaced)})"
+                h1_pattern = re.compile(r"^#\s+" + old_title_regex + r"\s*$", re.MULTILINE)
+                clean_display_title = new_stem.replace("_", " ")
+                updated_h1, h1_count = h1_pattern.subn(f"# {clean_display_title}", content)
+                if h1_count > 0:
+                    if transaction:
+                        transaction.write_content(dest_path, updated_h1)
+                    else:
+                        dest_path.write_text(updated_h1, encoding="utf-8")
+            except Exception:
+                pass
+
+        # Global wikilink refactoring for this item
+        updated_links = 0
+        if not skip_links:
+            updated_links = wikilink_engine.refactor_in_vault(
+                old_stem,
+                new_stem,
+                transaction=transaction,
+                dry_run=dry_run,
+            )
+
+        affected_folders.add(src_p.parent)
+
+        results.append(
+            RenameResult(
+                old_path=src_p,
+                new_path=dest_path,
+                updated_links_count=updated_links,
+                index_updated=True,
+                tx_id=getattr(transaction, "tx_id", None),
+            )
+        )
+
+    # Rebuild affected folder indices
+    for folder in affected_folders:
+        if folder.exists():
+            index_manager.rebuild_index(folder, transaction=transaction, dry_run=dry_run)
+
+    return results
+
+
 def move_item(
     config: VaultConfig,
     index_manager: IndexManager,
