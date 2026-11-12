@@ -303,7 +303,7 @@ class Vault:
 
     def batch_set_frontmatter_type(
         self,
-        mapping: Union[str, Path, Dict[Union[str, Path], str]],
+        mapping: Union[str, Path, Dict[Any, Any]],
         dry_run: bool = False,
     ) -> List[Tuple[Path, bool]]:
         """Batch set frontmatter type with strict All-or-Nothing preflight in a single transaction."""
@@ -335,7 +335,7 @@ class Vault:
 
     def batch_add_frontmatter_tags(
         self,
-        mapping: Union[str, Path, Dict[Union[str, Path], List[str]]],
+        mapping: Union[str, Path, Dict[Any, Any]],
         overwrite: bool = False,
         dry_run: bool = False,
     ) -> List[Tuple[Path, bool]]:
@@ -434,7 +434,7 @@ class Vault:
 
     def batch_rename(
         self,
-        mapping: Union[str, Path, Dict[Union[str, Path], str]],
+        mapping: Union[str, Path, Dict[Any, Any]],
         skip_links: bool = False,
         dry_run: bool = False,
     ) -> List[RenameResult]:
@@ -507,7 +507,7 @@ class Vault:
 
     def batch_move(
         self,
-        mapping: Union[str, Path, Dict[Union[str, Path], Union[str, Path]]],
+        mapping: Union[str, Path, Dict[Any, Any]],
         dry_run: bool = False,
     ) -> List[MoveResult]:
         """Batch move items into different folders with strict All-or-Nothing preflight in a single transaction."""
