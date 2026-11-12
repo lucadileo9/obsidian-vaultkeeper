@@ -2,6 +2,7 @@
 
 from pathlib import Path
 
+from vaultkeeper import __version__
 from vaultkeeper.cli.logging import close_cli_logger, setup_cli_logger
 from vaultkeeper.cli.main import main
 
@@ -13,7 +14,8 @@ def test_cli_version(capsys) -> None:
     except SystemExit as e:
         assert e.code == 0
     captured = capsys.readouterr()
-    assert "vk 0.1.0" in captured.out or "vk 0.1.0" in captured.err
+    expected = f"vk {__version__}"
+    assert expected in captured.out or expected in captured.err
 
 
 def test_cli_help(capsys) -> None:
