@@ -127,15 +127,27 @@ def build_parser() -> argparse.ArgumentParser:
     fm_subparsers = fm_parser.add_subparsers(dest="fm_action", help="Frontmatter actions")
 
     set_type_parser = fm_subparsers.add_parser("set-type", help="Set or update the tipo frontmatter field.")
-    set_type_parser.add_argument("--target", type=str, required=True, help="Path to target markdown note.")
+    set_type_parser.add_argument("--target", type=str, required=False, default=None, help="Path to target markdown note.")
     set_type_parser.add_argument(
-        "--type", type=str, required=True, help="Type value (e.g. Appunto, Progetto, Risorsa)."
+        "--type", type=str, required=False, default=None, help="Type value (e.g. Appunto, Progetto, Risorsa)."
+    )
+    set_type_parser.add_argument(
+        "--batch",
+        type=str,
+        default=None,
+        help="Path to JSON file mapping notes to note types ({note_path: type}).",
     )
     set_type_parser.add_argument("--dry-run", action="store_true", help="Simulate change without writing to disk.")
 
     add_tags_parser = fm_subparsers.add_parser("add-tags", help="Add tags to frontmatter.")
-    add_tags_parser.add_argument("--target", type=str, required=True, help="Path to target markdown note.")
-    add_tags_parser.add_argument("--tags", nargs="+", required=True, help="One or more tags to inject.")
+    add_tags_parser.add_argument("--target", type=str, required=False, default=None, help="Path to target markdown note.")
+    add_tags_parser.add_argument("--tags", nargs="+", required=False, default=None, help="One or more tags to inject.")
+    add_tags_parser.add_argument(
+        "--batch",
+        type=str,
+        default=None,
+        help="Path to JSON file mapping notes to tag lists ({note_path: [tags...]}).",
+    )
     add_tags_parser.add_argument("--overwrite", action="store_true", help="Replace existing tags instead of appending.")
     add_tags_parser.add_argument("--dry-run", action="store_true", help="Simulate change without writing to disk.")
 
@@ -345,6 +357,26 @@ def main(argv: Optional[List[str]] = None) -> int:
     """Main CLI entrypoint execution function."""
     parser = build_parser()
     args = parser.parse_args(argv)
+
+    if args.command == "rename" and not getattr(args, "batch", None) and (not args.file or not args.new_name):
+        parser.error("the following arguments are required: file, new_name (or use --batch)")
+
+    if args.command == "move" and not getattr(args, "batch", None) and (not args.target or not args.destination):
+        parser.error("the following arguments are required: target, destination (or use --batch)")
+
+    if args.command == "frontmatter":
+        if (
+            args.fm_action == "set-type"
+            and not getattr(args, "batch", None)
+            and (not args.target or not args.type)
+        ):
+            parser.error("the following arguments are required: --target, --type (or use --batch)")
+        elif (
+            args.fm_action == "add-tags"
+            and not getattr(args, "batch", None)
+            and (not args.target or not args.tags)
+        ):
+            parser.error("the following arguments are required: --target, --tags (or use --batch)")
 
     logger = setup_cli_logger(
         name="vk",

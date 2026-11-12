@@ -9,6 +9,7 @@ from ...core.frontmatter import (
     update_frontmatter,
 )
 from ...core.traversal import walk_vault_files
+from ...exceptions import FrontmatterError, VaultKeeperError
 from ...vault import Vault
 from ..constants import EXIT_ERROR, EXIT_SUCCESS
 
@@ -35,16 +36,43 @@ def handle_set_type(args: Namespace, logger: logging.Logger) -> int:
         logger.error("Failed to initialize vault: %s", exc)
         return EXIT_ERROR
 
+    batch_arg = getattr(args, "batch", None)
     target = getattr(args, "target", None)
     new_type = getattr(args, "type", None)
     dry_run = getattr(args, "dry_run", False)
+    prefix = "[DRY-RUN] " if dry_run else ""
+
+    if batch_arg:
+        try:
+            results = v.batch_set_frontmatter_type(batch_arg, dry_run=dry_run)
+        except (FrontmatterError, VaultKeeperError) as exc:
+            logger.error("Batch set-type rejected: %s", exc)
+            return EXIT_ERROR
+        except Exception as exc:
+            logger.error("Unexpected error during batch set-type: %s", exc)
+            return EXIT_ERROR
+
+        updated_count = 0
+        for p, changed in results:
+            if changed:
+                logger.info("%sUpdated %s: set %s to '%s'", prefix, p.name, v.config.type_field, new_type or "new type")
+                updated_count += 1
+            else:
+                logger.info("%sUnchanged: %s already has target %s", prefix, p.name, v.config.type_field)
+
+        logger.info(
+            "%sBatch set-type completed successfully: %d processed, %d updated.",
+            prefix,
+            len(results),
+            updated_count,
+        )
+        return EXIT_SUCCESS
 
     if not target or not new_type:
-        logger.error("Both --target and --type arguments are required.")
+        logger.error("Specify both --target and --type, or use --batch <file.json>.")
         return EXIT_ERROR
 
     target_path = Path(target).resolve()
-    prefix = "[DRY-RUN] " if dry_run else ""
     changed = v.set_frontmatter_type(target_path, new_type, dry_run=dry_run)
 
     if changed:
@@ -63,17 +91,46 @@ def handle_add_tags(args: Namespace, logger: logging.Logger) -> int:
         logger.error("Failed to initialize vault: %s", exc)
         return EXIT_ERROR
 
+    batch_arg = getattr(args, "batch", None)
     target = getattr(args, "target", None)
-    tags = getattr(args, "tags", [])
+    tags = getattr(args, "tags", None)
     overwrite = getattr(args, "overwrite", False)
     dry_run = getattr(args, "dry_run", False)
+    prefix = "[DRY-RUN] " if dry_run else ""
+
+    if batch_arg:
+        try:
+            results = v.batch_add_frontmatter_tags(batch_arg, overwrite=overwrite, dry_run=dry_run)
+        except (FrontmatterError, VaultKeeperError) as exc:
+            logger.error("Batch add-tags rejected: %s", exc)
+            return EXIT_ERROR
+        except Exception as exc:
+            logger.error("Unexpected error during batch add-tags: %s", exc)
+            return EXIT_ERROR
+
+        action_name = "overwritten" if overwrite else "added"
+        updated_count = 0
+        for p, changed in results:
+            if changed:
+                logger.info("%sUpdated %s: tags %s", prefix, p.name, action_name)
+                updated_count += 1
+            else:
+                logger.info("%sUnchanged: %s already contains specified tags", prefix, p.name)
+
+        logger.info(
+            "%sBatch %s completed successfully: %d processed, %d updated.",
+            prefix,
+            "overwrite-tags" if overwrite else "add-tags",
+            len(results),
+            updated_count,
+        )
+        return EXIT_SUCCESS
 
     if not target or not tags:
-        logger.error("Both --target and --tags arguments are required.")
+        logger.error("Specify both --target and --tags, or use --batch <file.json>.")
         return EXIT_ERROR
 
     target_path = Path(target).resolve()
-    prefix = "[DRY-RUN] " if dry_run else ""
     changed = v.add_frontmatter_tags(target_path, tags, overwrite=overwrite, dry_run=dry_run)
 
     if changed:
