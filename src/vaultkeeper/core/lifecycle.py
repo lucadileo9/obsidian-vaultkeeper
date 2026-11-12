@@ -4,7 +4,7 @@ import re
 import shutil
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
 from ..exceptions import ArchiveError, LifecycleError, NamingError, OffloadError
 from ..models import (
@@ -223,6 +223,124 @@ def move_item(
         new_index_updated=new_index_updated,
         tx_id=getattr(transaction, "tx_id", None),
     )
+
+
+def batch_move_items(
+    config: VaultConfig,
+    index_manager: IndexManager,
+    mapping: Dict[Union[str, Path], Union[str, Path]],
+    transaction: Optional[Any] = None,
+    dry_run: bool = False,
+) -> List[MoveResult]:
+    """Execute batch move of multiple items with strict All-or-Nothing preflight validation.
+
+    Args:
+        config: Vault configuration schema.
+        index_manager: IndexManager instance for folder MOC synchronization.
+        mapping: Dictionary mapping source paths to destination folders/paths.
+        transaction: Optional active TransactionContext.
+        dry_run: If True, simulates moves without altering disk.
+
+    Returns:
+        List of MoveResult domain models.
+
+    Raises:
+        LifecycleError: If any preflight validation fails (missing source, destination collision,
+                        or intra-batch collision).
+    """
+    if not mapping:
+        raise LifecycleError("Batch move mapping cannot be empty.")
+
+    root_resolved = config.root_path.resolve()
+    validated_moves: List[Tuple[Path, Path, Path]] = []
+    dest_files_set: Set[Path] = set()
+
+    # Pre-flight Check Phase (Strict All-or-Nothing)
+    for src_raw, dest_raw in mapping.items():
+        src_raw_p = Path(src_raw)
+        src_p = (root_resolved / src_raw_p if not src_raw_p.is_absolute() else src_raw_p).resolve()
+
+        if not src_p.exists():
+            raise LifecycleError(f"Batch move failed pre-flight: Source path does not exist: '{src_raw}'")
+
+        dest_raw_p = Path(dest_raw)
+        dest_target = (root_resolved / dest_raw_p if not dest_raw_p.is_absolute() else dest_raw_p).resolve()
+
+        if src_p.is_file():
+            if dest_target.suffix == src_p.suffix and not dest_target.is_dir():
+                dest_dir = dest_target.parent
+                dest_file = dest_target
+            else:
+                dest_dir = dest_target
+                dest_file = dest_dir / src_p.name
+        else:
+            dest_dir = dest_target
+            dest_file = dest_dir / src_p.name
+
+        # Check intra-batch duplicate destination collisions
+        if dest_file in dest_files_set:
+            raise LifecycleError(
+                f"Batch move failed pre-flight: Multiple sources map to the same destination: '{dest_file.name}'"
+            )
+        dest_files_set.add(dest_file)
+
+        # Check existing destination collision on disk
+        if dest_file.exists() and dest_file != src_p:
+            # Allow destination only if it is also a source being moved away in this same batch
+            is_src_in_batch = any(
+                (root_resolved / Path(s) if not Path(s).is_absolute() else Path(s)).resolve() == dest_file
+                for s in mapping.keys()
+            )
+            if not is_src_in_batch:
+                raise LifecycleError(f"Batch move failed pre-flight: Destination already exists: '{dest_file}'")
+
+        validated_moves.append((src_p, dest_dir, dest_file))
+
+    # Execution Phase (All pre-flight checks passed)
+    results: List[MoveResult] = []
+    affected_folders: Set[Path] = set()
+
+    for src_p, dest_dir, dest_file in validated_moves:
+        if src_p == dest_file:
+            results.append(
+                MoveResult(
+                    source_path=src_p,
+                    dest_path=dest_file,
+                    old_index_updated=False,
+                    new_index_updated=False,
+                    tx_id=getattr(transaction, "tx_id", None),
+                )
+            )
+            continue
+
+        if not dry_run:
+            dest_dir.mkdir(parents=True, exist_ok=True)
+            if transaction:
+                transaction.move_file(src_p, dest_file)
+            else:
+                shutil.move(str(src_p), str(dest_file))
+
+        affected_folders.add(src_p.parent)
+        affected_folders.add(dest_dir)
+
+    # Rebuild indices for all unique affected folders
+    for folder in affected_folders:
+        if folder.exists():
+            index_manager.rebuild_index(folder, transaction=transaction, dry_run=dry_run)
+
+    for src_p, dest_dir, dest_file in validated_moves:
+        if src_p != dest_file:
+            results.append(
+                MoveResult(
+                    source_path=src_p,
+                    dest_path=dest_file,
+                    old_index_updated=src_p.parent in affected_folders,
+                    new_index_updated=dest_dir in affected_folders,
+                    tx_id=getattr(transaction, "tx_id", None),
+                )
+            )
+
+    return results
 
 
 def archive_item(
