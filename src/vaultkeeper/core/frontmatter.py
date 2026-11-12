@@ -2,7 +2,7 @@
 
 import re
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
 import yaml
 
@@ -198,3 +198,162 @@ def parse_taxonomy_file(taxonomy_path: Path) -> Set[str]:
                 tags.add(norm)
 
     return tags
+
+
+def batch_set_type(
+    vault_root: Path,
+    mapping: Dict[Union[str, Path], str],
+    allowed_types: Optional[List[str]] = None,
+    type_field: str = "tipo",
+    transaction: Optional[Any] = None,
+    dry_run: bool = False,
+) -> List[Tuple[Path, bool]]:
+    """Execute batch update of frontmatter tipo with strict All-or-Nothing preflight validation.
+
+    Args:
+        vault_root: Vault root directory Path.
+        mapping: Dictionary mapping note paths to new type strings.
+        allowed_types: Optional list of authorized note types.
+        type_field: Frontmatter key for note type (default: 'tipo').
+        transaction: Optional active TransactionContext.
+        dry_run: If True, simulates changes without writing to disk.
+
+    Returns:
+        List of tuples: (note_path, was_modified).
+
+    Raises:
+        FrontmatterError: If any preflight validation fails (note missing, invalid type).
+    """
+    if not mapping:
+        raise FrontmatterError("Batch set-type mapping cannot be empty.")
+
+    root_resolved = vault_root.resolve()
+    validated_items: List[Tuple[Path, str]] = []
+
+    # Pre-flight Check Phase (Strict All-or-Nothing)
+    for target_raw, new_type in mapping.items():
+        p = (root_resolved / Path(target_raw) if not Path(target_raw).is_absolute() else Path(target_raw)).resolve()
+
+        if not p.is_file():
+            raise FrontmatterError(f"Batch set-type failed pre-flight: Note not found: '{target_raw}'")
+
+        clean_type = str(new_type).strip() if new_type is not None else ""
+        if not clean_type:
+            raise FrontmatterError(f"Batch set-type failed pre-flight: Empty type provided for note: '{target_raw}'")
+
+        if allowed_types:
+            matched = [t for t in allowed_types if t.lower() == clean_type.lower()]
+            if not matched:
+                raise FrontmatterError(
+                    f"Batch set-type failed pre-flight: Invalid note type '{new_type}' for note '{target_raw}'. "
+                    f"Allowed types: {', '.join(allowed_types)}"
+                )
+            clean_type = matched[0]
+
+        validated_items.append((p, clean_type))
+
+    # Execution Phase
+    results: List[Tuple[Path, bool]] = []
+    for p, clean_type in validated_items:
+        content = p.read_text(encoding="utf-8")
+        updated = update_frontmatter(content, {type_field: clean_type}, type_field=type_field)
+        changed = (updated != content)
+
+        if changed and not dry_run:
+            if transaction:
+                transaction.write_content(p, updated)
+            else:
+                p.write_text(updated, encoding="utf-8")
+
+        results.append((p, changed))
+
+    return results
+
+
+def batch_add_tags(
+    vault_root: Path,
+    mapping: Dict[Union[str, Path], List[str]],
+    allowed_taxonomy_tags: Optional[Set[str]] = None,
+    strict_taxonomy: bool = False,
+    overwrite: bool = False,
+    type_field: str = "tipo",
+    transaction: Optional[Any] = None,
+    dry_run: bool = False,
+) -> List[Tuple[Path, bool]]:
+    """Execute batch addition or replacement of frontmatter tags with strict All-or-Nothing preflight.
+
+    Args:
+        vault_root: Vault root directory Path.
+        mapping: Dictionary mapping note paths to lists of tags.
+        allowed_taxonomy_tags: Optional set of canonical taxonomy tags.
+        strict_taxonomy: If True, validates tags against taxonomy.
+        overwrite: If True, replaces existing tags instead of appending.
+        type_field: Frontmatter key for note type (default: 'tipo').
+        transaction: Optional active TransactionContext.
+        dry_run: If True, simulates changes without writing to disk.
+
+    Returns:
+        List of tuples: (note_path, was_modified).
+
+    Raises:
+        FrontmatterError: If any note is missing or tags format is invalid.
+        TaxonomyError: If strict taxonomy is enabled and an unauthorized tag is encountered.
+    """
+    if not mapping:
+        raise FrontmatterError("Batch add-tags mapping cannot be empty.")
+
+    root_resolved = vault_root.resolve()
+    validated_items: List[Tuple[Path, List[str]]] = []
+
+    # Pre-flight Check Phase (Strict All-or-Nothing)
+    for target_raw, tags_raw in mapping.items():
+        p = (root_resolved / Path(target_raw) if not Path(target_raw).is_absolute() else Path(target_raw)).resolve()
+
+        if not p.is_file():
+            raise FrontmatterError(f"Batch add-tags failed pre-flight: Note not found: '{target_raw}'")
+
+        if not isinstance(tags_raw, (list, tuple, set)):
+            raise FrontmatterError(
+                f"Batch add-tags failed pre-flight: Tags for '{target_raw}' must be a list of strings, "
+                f"got {type(tags_raw).__name__}"
+            )
+
+        cleaned_tags: List[str] = []
+        for t in tags_raw:
+            clean_t = normalize_tag(str(t))
+            if clean_t and clean_t not in cleaned_tags:
+                cleaned_tags.append(clean_t)
+
+        if strict_taxonomy and allowed_taxonomy_tags is not None:
+            for tag in cleaned_tags:
+                if tag not in allowed_taxonomy_tags:
+                    raise TaxonomyError(
+                        f"Batch add-tags failed pre-flight: Tag '{tag}' for note '{target_raw}' "
+                        "is not registered in taxonomy."
+                    )
+
+        validated_items.append((p, cleaned_tags))
+
+    # Execution Phase
+    results: List[Tuple[Path, bool]] = []
+    for p, cleaned_tags in validated_items:
+        content = p.read_text(encoding="utf-8")
+        fm, _ = parse_note_content(content, type_field=type_field)
+
+        if overwrite or fm is None:
+            final_tags = cleaned_tags
+        else:
+            final_tags = list(dict.fromkeys(fm.tags + cleaned_tags))
+
+        updated = update_frontmatter(content, {"tags": final_tags}, type_field=type_field)
+        changed = (updated != content)
+
+        if changed and not dry_run:
+            if transaction:
+                transaction.write_content(p, updated)
+            else:
+                p.write_text(updated, encoding="utf-8")
+
+        results.append((p, changed))
+
+    return results
