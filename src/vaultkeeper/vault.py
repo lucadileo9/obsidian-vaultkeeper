@@ -1,7 +1,8 @@
 """High-level Vault facade providing pure Python API for all vault operations."""
 
+import json
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
 from proteus.core import ConfigurationManager
 
@@ -15,6 +16,8 @@ from .core.attachments import (
 from .core.audit import run_audit
 from .core.document import MarkdownDocument
 from .core.frontmatter import (
+    batch_add_tags,
+    batch_set_type,
     parse_note_content,
     read_note,
     update_frontmatter,
@@ -22,7 +25,14 @@ from .core.frontmatter import (
 from .core.graph import GraphTelemetry
 from .core.indices import IndexManager, write_folder_index
 from .core.journal import TransactionJournal
-from .core.lifecycle import archive_item, move_item, offload_media, rename_item
+from .core.lifecycle import (
+    archive_item,
+    batch_move_items,
+    batch_rename_items,
+    move_item,
+    offload_media,
+    rename_item,
+)
 from .core.links import WikilinkEngine, find_stem_collisions, scan_broken_links
 from .core.map import VaultMapEngine
 from .core.naming import batch_normalize, normalize_stem
@@ -30,7 +40,13 @@ from .core.search import SearchEngine
 from .core.taxonomy import TaxonomyEngine
 from .core.templates import TemplateEngine, resolve_target_folder
 from .core.traversal import build_vault_catalog, walk_vault_directories
-from .exceptions import CreationError, FrontmatterError, TaxonomyError, VaultNotFoundError
+from .exceptions import (
+    CreationError,
+    FrontmatterError,
+    TaxonomyError,
+    VaultKeeperError,
+    VaultNotFoundError,
+)
 from .models import (
     ArchiveResult,
     AuditReport,
@@ -269,6 +285,97 @@ class Vault:
 
         return True
 
+    @staticmethod
+    def _load_batch_mapping(batch_source: Any) -> Dict[Any, Any]:
+        """Load and validate JSON dictionary mapping for batch operations."""
+        if isinstance(batch_source, dict):
+            return dict(batch_source)
+        p = Path(batch_source).resolve()
+        if not p.is_file():
+            raise VaultKeeperError(f"Batch mapping file not found: {p}")
+        try:
+            data = json.loads(p.read_text(encoding="utf-8"))
+        except Exception as exc:
+            raise VaultKeeperError(f"Invalid JSON in batch file '{p}': {exc}") from exc
+        if not isinstance(data, dict):
+            raise VaultKeeperError(f"Batch file must contain a JSON dictionary mapping, got {type(data).__name__}")
+        return data
+
+    def batch_set_frontmatter_type(
+        self,
+        mapping: Union[str, Path, Dict[Union[str, Path], str]],
+        dry_run: bool = False,
+    ) -> List[Tuple[Path, bool]]:
+        """Batch set frontmatter type with strict All-or-Nothing preflight in a single transaction."""
+        mapping_dict = self._load_batch_mapping(mapping)
+        if dry_run:
+            return batch_set_type(
+                self.root,
+                mapping_dict,
+                allowed_types=self.config.allowed_types,
+                type_field=self.config.type_field,
+                dry_run=True,
+            )
+
+        with self.journal.begin_transaction(
+            "frontmatter",
+            f"Batch set tipo on {len(mapping_dict)} notes",
+        ) as tx:
+            results = batch_set_type(
+                self.root,
+                mapping_dict,
+                allowed_types=self.config.allowed_types,
+                type_field=self.config.type_field,
+                transaction=tx,
+                dry_run=False,
+            )
+
+        self.refresh()
+        return results
+
+    def batch_add_frontmatter_tags(
+        self,
+        mapping: Union[str, Path, Dict[Union[str, Path], List[str]]],
+        overwrite: bool = False,
+        dry_run: bool = False,
+    ) -> List[Tuple[Path, bool]]:
+        """Batch add or overwrite frontmatter tags with strict All-or-Nothing preflight."""
+        mapping_dict = self._load_batch_mapping(mapping)
+        allowed_tags: Optional[Set[str]] = None
+        if self.config.strict_taxonomy and self.config.taxonomy_file:
+            tax_engine = TaxonomyEngine(self.config)
+            allowed_tags = tax_engine.load_taxonomy()
+
+        if dry_run:
+            return batch_add_tags(
+                self.root,
+                mapping_dict,
+                allowed_taxonomy_tags=allowed_tags,
+                strict_taxonomy=self.config.strict_taxonomy,
+                overwrite=overwrite,
+                type_field=self.config.type_field,
+                dry_run=True,
+            )
+
+        action_desc = "overwrite" if overwrite else "add"
+        with self.journal.begin_transaction(
+            "frontmatter",
+            f"Batch {action_desc} tags on {len(mapping_dict)} notes",
+        ) as tx:
+            results = batch_add_tags(
+                self.root,
+                mapping_dict,
+                allowed_taxonomy_tags=allowed_tags,
+                strict_taxonomy=self.config.strict_taxonomy,
+                overwrite=overwrite,
+                type_field=self.config.type_field,
+                transaction=tx,
+                dry_run=False,
+            )
+
+        self.refresh()
+        return results
+
     def history(self, limit: int = 20) -> List[TransactionRecord]:
         """List historical transactions from newest to oldest."""
         return self.journal.list_transactions(limit=limit)
@@ -325,6 +432,46 @@ class Vault:
         self.refresh()
         return res
 
+    def batch_rename(
+        self,
+        mapping: Union[str, Path, Dict[Union[str, Path], str]],
+        skip_links: bool = False,
+        dry_run: bool = False,
+    ) -> List[RenameResult]:
+        """Batch rename notes or assets with strict All-or-Nothing preflight in a single transaction."""
+        mapping_dict = self._load_batch_mapping(mapping)
+        idx_mgr = IndexManager(self.config)
+        link_engine = WikilinkEngine(self.config)
+
+        if dry_run:
+            return batch_rename_items(
+                self.catalog,
+                self.config,
+                idx_mgr,
+                link_engine,
+                mapping_dict,
+                skip_links=skip_links,
+                dry_run=True,
+            )
+
+        with self.journal.begin_transaction(
+            "rename",
+            f"Batch rename {len(mapping_dict)} items",
+        ) as tx:
+            results = batch_rename_items(
+                self.catalog,
+                self.config,
+                idx_mgr,
+                link_engine,
+                mapping_dict,
+                skip_links=skip_links,
+                transaction=tx,
+                dry_run=False,
+            )
+
+        self.refresh()
+        return results
+
     def move(
         self,
         source_path: Union[str, Path],
@@ -357,6 +504,38 @@ class Vault:
 
         self.refresh()
         return res
+
+    def batch_move(
+        self,
+        mapping: Union[str, Path, Dict[Union[str, Path], Union[str, Path]]],
+        dry_run: bool = False,
+    ) -> List[MoveResult]:
+        """Batch move items into different folders with strict All-or-Nothing preflight in a single transaction."""
+        mapping_dict = self._load_batch_mapping(mapping)
+        idx_mgr = IndexManager(self.config)
+
+        if dry_run:
+            return batch_move_items(
+                self.config,
+                idx_mgr,
+                mapping_dict,
+                dry_run=True,
+            )
+
+        with self.journal.begin_transaction(
+            "move",
+            f"Batch move {len(mapping_dict)} items",
+        ) as tx:
+            results = batch_move_items(
+                self.config,
+                idx_mgr,
+                mapping_dict,
+                transaction=tx,
+                dry_run=False,
+            )
+
+        self.refresh()
+        return results
 
     def archive(
         self,
