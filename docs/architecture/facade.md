@@ -209,10 +209,20 @@ sequenceDiagram
 - **Transazionale:** Sì (registra `frontmatter` nel Journal).
 - **Ritorno:** `True` se il file è stato modificato, `False` se il valore era già conforme.
 
+#### `batch_set_frontmatter_type(mapping: Union[str, Path, Dict[Any, Any]], dry_run: bool = False) -> List[Tuple[Path, bool]]`
+- **Scopo:** Aggiorna il tipo di più note simultaneamente da dizionario o file JSON. Esegue validazione preflight Strict All-or-Nothing (blocca l'esecuzione se un tipo non è consentito o una nota non esiste) ed incapsula tutte le modifiche in una **singola transazione reversibile**.
+- **Transazionale:** Sì (singola transazione Journal per l'intero batch).
+- **Ritorno:** Lista di tuple `(path_nota, modificato: bool)`.
+
 #### `add_frontmatter_tags(target, tags, overwrite=False, dry_run=False) -> bool`
 - **Scopo:** Aggiunge o sovrascrive i tag nel frontmatter YAML di una nota.
 - **Transazionale:** Sì (registra `frontmatter` nel Journal).
 - **Ritorno:** `True` se il documento è stato alterato.
+
+#### `batch_add_frontmatter_tags(mapping: Union[str, Path, Dict[Any, Any]], overwrite: bool = False, dry_run: bool = False) -> List[Tuple[Path, bool]]`
+- **Scopo:** Inietta o sovrascrive tag su più note da dizionario o file JSON. Esegue preflight Strict All-or-Nothing verificando l'esistenza delle note e la conformità tassonomica preventiva (se `strict_taxonomy = true`).
+- **Transazionale:** Sì (singola transazione Journal per l'intero batch).
+- **Ritorno:** Lista di tuple `(path_nota, modificato: bool)`.
 
 ---
 
@@ -234,10 +244,20 @@ sequenceDiagram
 - **Transazionale:** Sì (registra `rename` nel Journal).
 - **Ritorno:** `RenameResult`.
 
+#### `batch_rename(mapping: Union[str, Path, Dict[Any, Any]], skip_links: bool = False, dry_run: bool = False) -> List[RenameResult]`
+- **Scopo:** Rinomina un insieme di note da mapping dizionario o file JSON. Esegue preflight Strict All-or-Nothing rilevando preventivamente collisioni con file esistenti o duplicati all'interno del batch stesso. Aggiorna wikilink e indici per ciascuna voce e racchiude tutto in un'**unica transazione reversibile via `undo`**.
+- **Transazionale:** Sì (singola transazione Journal per l'intero batch).
+- **Ritorno:** `List[RenameResult]`.
+
 #### `move(source_path, dest_folder, dry_run=False) -> MoveResult`
 - **Scopo:** Sposta una nota o cartella in una directory decimale differente, aggiornando sia l'indice MOC sorgente che quello di destinazione.
 - **Transazionale:** Sì (registra `move` nel Journal).
 - **Ritorno:** `MoveResult`.
+
+#### `batch_move(mapping: Union[str, Path, Dict[Any, Any]], dry_run: bool = False) -> List[MoveResult]`
+- **Scopo:** Sposta un insieme di file verso le rispettive cartelle target da mapping dizionario o file JSON. Esegue validazione preflight Strict All-or-Nothing (controlla esistenza sorgenti, assenza collisioni a destinazione e assenza collisioni intra-batch). Sincronizza tutti gli indici di cartella coinvolti in una **singola transazione reversibile**.
+- **Transazionale:** Sì (singola transazione Journal per l'intero batch).
+- **Ritorno:** `List[MoveResult]`.
 
 #### `archive(item_path, no_tombstone=False, dry_run=False) -> ArchiveResult`
 - **Scopo:** Trasferisce una nota o progetto nell'archivio speculare a freddo. Se `no_tombstone=False`, deposita nella posizione originale una scheda tombstone con metadati storici e puntamento al cold storage.

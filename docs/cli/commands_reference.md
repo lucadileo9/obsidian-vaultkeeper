@@ -182,17 +182,27 @@ Sottocomando per l'ispezione e la manipolazione controllata dei metadati YAML co
 ### Sottocomandi Esposti
 1. **`set-type`**: Imposta o aggiorna il campo tipologico (`tipo`).
    ```bash
+   # Singola nota
    vk frontmatter set-type --target NOTA.md --type Appunto [--dry-run]
+
+   # Esecuzione batch da file JSON ({nota: tipo})
+   vk frontmatter set-type --batch batch_types.json [--dry-run]
    ```
 2. **`add-tags`**: Inietta uno o più tag nel frontmatter.
    ```bash
+   # Singola nota
    vk frontmatter add-tags --target NOTA.md --tags tech/python area/dev [--overwrite] [--dry-run]
+
+   # Esecuzione batch da file JSON ({nota: [tag1, tag2]})
+   vk frontmatter add-tags --batch batch_tags.json [--overwrite] [--dry-run]
    ```
    - `--overwrite`: Sostituisce i tag esistenti invece di accodarli.
 3. **`sanitize-tags`**: Riscrive i tag obsoleti mappandoli secondo le regole di `config.tag_replacements`.
    ```bash
    vk frontmatter sanitize-tags [--target DIR] [--dry-run]
    ```
+
+I template JSON di riferimento per le operazioni batch sono disponibili in [`examples/batch/`](file:///home/lucadileo9/scripts/obsidian-vaultkeeper/examples/batch/).
 
 ### Reversibilità
 Tutte le modifiche al frontmatter sono incapsulate in transazioni e **reversibili tramite `vk undo`**.
@@ -274,45 +284,63 @@ vk undo
 
 ## 11. `vk rename`
 
-Rinomina un file o un appunto Markdown garantendo la normalizzazione dello stem, il pre-flight check sulle collisioni, l'aggiornamento simultaneo di tutti i wikilink in ingresso nel Vault e la sincronizzazione del MOC di cartella.
+Rinomina un file o un appunto Markdown garantendo la normalizzazione dello stem, il pre-flight check sulle collisioni, l'aggiornamento simultaneo di tutti i wikilink in ingresso nel Vault e la sincronizzazione del MOC di cartella. Supporta sia la rinomina singola che l'elaborazione batch atomica da mapping JSON.
 
 ### Sintassi
 ```bash
+# Rinomina singola
 vk rename FILE NUOVO_NOME [--skip-links] [--dry-run]
+
+# Rinomina batch da file JSON ({vecchio_percorso: nuovo_nome})
+vk rename --batch mapping.json [--skip-links] [--dry-run]
 ```
-- `FILE`: Percorso del file da rinominare.
+- `FILE`: Percorso del file da rinominare (opzionale se `--batch` specificato).
 - `NUOVO_NOME`: Nuovo nome o stem (con o senza estensione `.md`).
+- `--batch`: Percorso al file JSON contenente il dizionario di rinomina `{vecchio_percorso: nuovo_nome}`.
 - `--skip-links`: Rinomina solo il file fisico saltando la riscrittura dei wikilink nel Vault.
 - `--dry-run`: Simula l'operazione visualizzando i link che verrebbero aggiornati.
 
 ### Interazione Architetturale
-`handle_rename()` $\rightarrow$ [`Vault.rename()`](file:///home/lucadileo9/scripts/obsidian-vaultkeeper/docs/architecture/facade.md#renameold_path-new_name-skip_linksfalse-dry_runfalse---renameresult) $\rightarrow$ Restituisce [`RenameResult`](file:///home/lucadileo9/scripts/obsidian-vaultkeeper/docs/architecture/models.md#renameresult).
+`handle_rename()` $\rightarrow$ [`Vault.rename()`](file:///home/lucadileo9/scripts/obsidian-vaultkeeper/docs/architecture/facade.md#renameold_path-new_name-skip_linksfalse-dry_runfalse---renameresult) o [`Vault.batch_rename()`](file:///home/lucadileo9/scripts/obsidian-vaultkeeper/docs/architecture/facade.md#batch_renamemapping-skip_linksfalse-dry_runfalse---listrenameresult).
 
 ### Esempio
 ```bash
+# Singola nota
 vk rename 10-19_Progetti/vecchio_progetto.md Progetto_Varys --dry-run
+
+# Batch da file JSON
+vk rename --batch examples/batch/batch_rename_template.json
 ```
 
 ---
 
 ## 12. `vk move`
 
-Sposta una nota o una cartella in una directory decimale differente, aggiornando sia l'indice MOC della cartella di origine che quello della cartella di arrivo.
+Sposta una o più note in una directory decimale differente, aggiornando sia l'indice MOC della cartella di origine che quello della cartella di arrivo. Supporta sia lo spostamento singolo che l'elaborazione batch atomica da mapping JSON con validazione Strict All-or-Nothing.
 
 ### Sintassi
 ```bash
+# Spostamento singolo
 vk move BERSAGLIO DESTINAZIONE [--dry-run]
+
+# Spostamento batch da file JSON ({sorgente: cartella_destinazione})
+vk move --batch mapping.json [--dry-run]
 ```
-- `BERSAGLIO`: File o directory da spostare.
+- `BERSAGLIO`: File o directory da spostare (opzionale se `--batch` specificato).
 - `DESTINAZIONE`: Cartella di arrivo.
+- `--batch`: Percorso al file JSON contenente il mapping `{sorgente: cartella_destinazione}`.
 - `--dry-run`: Anteprima dello spostamento.
 
 ### Reversibilità
-**Reversibile al 100% con `vk undo`**.
+**Reversibile al 100% con un singolo `vk undo`** sia per operazioni singole che batch.
 
 ### Esempio
 ```bash
+# Singolo file
 vk move 20-29_Istruzione/Architettura.md 10-19_Progetti/
+
+# Batch da file JSON
+vk move --batch examples/batch/batch_move_template.json
 ```
 
 ---

@@ -102,6 +102,28 @@ Per la consultazione dettagliata di argomenti, opzioni ed esempi d'uso per ciasc
 
 ---
 
+## Operazioni Batch da File JSON
+
+Per migrazioni massive o riorganizzazioni rapide, `vk` supporta l'opzione `--batch <file.json>` sui comandi di mutazione, applicando la strategia **Strict All-or-Nothing preflight** e raggruppando tutte le azioni in un'**unica transazione reversibile**:
+
+```bash
+# Spostamento batch di note verso cartelle di destinazione
+vk move --batch batch_move.json
+
+# Rinomina batch con refactoring globale di tutti i wikilink
+vk rename --batch batch_rename.json
+
+# Assegnazione massiva del tipo di nota (Frontmatter)
+vk frontmatter set-type --batch batch_types.json
+
+# Iniezione massiva di tag tassonomici (Frontmatter)
+vk frontmatter add-tags --batch batch_tags.json
+```
+
+I file JSON adottano la sintassi dizionario `{sorgente: valore_target}`. I template pronti all'uso sono consultabili nella cartella [`examples/batch/`](examples/batch/).
+
+---
+
 ## Utilizzo come Libreria Python (SDK)
 
 La classe Facade [`Vault`](docs/architecture/facade.md) espone un'interfaccia unificata per script di automazione o agenti intelligenti:
@@ -160,9 +182,9 @@ docs/
 
 ## Qualità e Suite di Test
 
-- **Test Suite**: 153 test automatizzati eseguiti in meno di 0.8s.
+- **Test Suite**: 166 test automatizzati eseguiti in meno di 0.9s.
 - **Copertura del Codice**: $\ge 90\%$ complessivo misurato con `pytest-cov`.
-- **Controllo Tipi Statico**: 100% conforme a `mypy --strict` su 78 file sorgente.
+- **Controllo Tipi Statico**: 100% conforme a `mypy --strict` su 79 file sorgente.
 - **Stile & Linting**: 100% conforme alle regole di `ruff check` e `ruff format`.
 - **Sicurezza**: Zero vulnerabilità o avvisi rilevati tramite scanner AST `bandit`.
 

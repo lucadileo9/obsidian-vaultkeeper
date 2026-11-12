@@ -152,6 +152,12 @@ Esegue il parsing dei metadati YAML posizionati all'inizio dei file Markdown, ga
 #### `parse_taxonomy_file(taxonomy_file_path: Path) -> Set[str]`
 - **Descrizione:** Legge un file di tassonomia controllata (es. `00_Tassonomia_Tag.md`) ed estrae l'insieme di tutti i tag censiti (inclusi elenchi puntati e tag con `#`).
 
+#### `batch_set_type(vault_root, mapping, allowed_types, type_field="tipo", transaction=None, dry_run=False) -> List[Tuple[Path, bool]]`
+- **Descrizione:** Applica in batch il valore del campo tipologico sulle note specificate. Implementa **Strict All-or-Nothing preflight**: se un tipo non è registrato in `allowed_types` o una nota non esiste, l'intero lotto viene abortito senza alcuna modifica.
+
+#### `batch_add_tags(vault_root, mapping, allowed_taxonomy_tags=None, strict_taxonomy=False, overwrite=False, type_field="tipo", transaction=None, dry_run=False) -> List[Tuple[Path, bool]]`
+- **Descrizione:** Inietta o sovrascrive tag in batch su note multiple. Con `strict_taxonomy=True`, esegue preflight per verificare che ogni tag sia registrato nel vocabolario controllato prima di applicare modifiche.
+
 ---
 
 ## 4. `naming.py` — Standardizzazione dei Nomi e Wikilink
@@ -242,10 +248,28 @@ Orchestra le mutazioni ad alto impatto sistemico che coinvolgono molteplici comp
 - Scansiona l'intero Vault aggiornando tutti i wikilink in ingresso verso la nota.
 - Risincronizza il file `00_Indice.md` della cartella.
 
+#### `batch_rename_items(...) -> List[RenameResult]`
+- Esegue la rinomina atomica di un elenco di note da dizionario mapping.
+- **Strict All-or-Nothing preflight:**
+  - Verifica l'esistenza di ciascun file sorgente.
+  - Verifica l'assenza di collisioni di stem con note già presenti nel Vault.
+  - Rileva collisioni intra-batch (due sorgenti mappate sullo stesso stem di destinazione).
+  - In caso di anomalie, solleva eccezione immediata e modifica 0 file su disco.
+- Se valido, processa ogni rinomina aggiornando wikilink e indici di cartella.
+
 #### `move_item(...) -> MoveResult`
 - Sposta una nota o cartella tra rami Johnny.Decimal.
 - Rimuove la voce dal MOC della cartella di origine.
 - Aggiunge la voce nel MOC della cartella di destinazione.
+
+#### `batch_move_items(...) -> List[MoveResult]`
+- Sposta atomicamente una collezione di note/cartelle verso le rispettive destinazioni.
+- **Strict All-or-Nothing preflight:**
+  - Verifica l'esistenza di tutte le sorgenti.
+  - Verifica l'esistenza o creabilità delle cartelle di destinazione.
+  - Verifica l'assenza di file già esistenti nelle posizioni target.
+  - Rileva conflitti di duplicazione intra-batch (sorgenti distinte che produrrebbero lo stesso nome nella medesima cartella).
+- Sincronizza coerentemente i MOC di tutte le cartelle coinvolte.
 
 #### `archive_item(...) -> ArchiveResult`
 - Sposta la nota o il progetto nella cartella speculare di Cold Storage (`/srv/storage/Archive`).
