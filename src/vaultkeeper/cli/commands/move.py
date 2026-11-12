@@ -16,10 +16,36 @@ def handle_move(args: Namespace, logger: logging.Logger) -> int:
         logger.error("Failed to initialize vault: %s", exc)
         return EXIT_ERROR
 
-    target_arg = getattr(args, "target")
-    dest_arg = getattr(args, "destination")
+    batch_arg = getattr(args, "batch", None)
+    target_arg = getattr(args, "target", None)
+    dest_arg = getattr(args, "destination", None)
     dry_run = getattr(args, "dry_run", False)
     prefix = "[DRY-RUN] " if dry_run else ""
+
+    if batch_arg:
+        try:
+            results = v.batch_move(
+                mapping=batch_arg,
+                dry_run=dry_run,
+            )
+        except (LifecycleError, VaultKeeperError) as exc:
+            logger.error("Batch move rejected: %s", exc)
+            return EXIT_ERROR
+        except Exception as exc:
+            logger.error("Unexpected error during batch move: %s", exc)
+            return EXIT_ERROR
+
+        for res in results:
+            logger.info("%sMoved: %s -> %s", prefix, res.source_path.name, res.dest_path.parent.name)
+
+        tx_id = results[0].tx_id if results and results[0].tx_id else None
+        tx_info = f" (Tx: {tx_id})" if tx_id else ""
+        logger.info("%sBatch move completed successfully: %d items moved%s.", prefix, len(results), tx_info)
+        return EXIT_SUCCESS
+
+    if not target_arg or not dest_arg:
+        logger.error("Missing arguments: specify both <target> and <destination>, or use --batch <file.json>.")
+        return EXIT_ERROR
 
     try:
         res = v.move(

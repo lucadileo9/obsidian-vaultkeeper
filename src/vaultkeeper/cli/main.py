@@ -171,8 +171,14 @@ def build_parser() -> argparse.ArgumentParser:
 
     # 11. vk rename
     rename_parser = subparsers.add_parser("rename", help="Rename a note or asset with global wikilink refactoring.")
-    rename_parser.add_argument("file", type=str, help="Path of the file to rename.")
-    rename_parser.add_argument("new_name", type=str, help="New file name or stem.")
+    rename_parser.add_argument("file", nargs="?", default=None, type=str, help="Path of the file to rename.")
+    rename_parser.add_argument("new_name", nargs="?", default=None, type=str, help="New file name or stem.")
+    rename_parser.add_argument(
+        "--batch",
+        type=str,
+        default=None,
+        help="Path to JSON file mapping old paths to new names ({old_path: new_name}).",
+    )
     rename_parser.add_argument(
         "--skip-links",
         action="store_true",
@@ -188,8 +194,14 @@ def build_parser() -> argparse.ArgumentParser:
     move_parser = subparsers.add_parser(
         "move", help="Move a note or folder into a different directory and update indices."
     )
-    move_parser.add_argument("target", type=str, help="Path of the file or folder to move.")
-    move_parser.add_argument("destination", type=str, help="Destination directory path.")
+    move_parser.add_argument("target", nargs="?", default=None, type=str, help="Path of the file or folder to move.")
+    move_parser.add_argument("destination", nargs="?", default=None, type=str, help="Destination directory path.")
+    move_parser.add_argument(
+        "--batch",
+        type=str,
+        default=None,
+        help="Path to JSON file mapping sources to destination folders ({source_path: dest_folder}).",
+    )
     move_parser.add_argument(
         "--dry-run",
         action="store_true",

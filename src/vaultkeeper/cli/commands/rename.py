@@ -16,11 +16,55 @@ def handle_rename(args: Namespace, logger: logging.Logger) -> int:
         logger.error("Failed to initialize vault: %s", exc)
         return EXIT_ERROR
 
-    file_arg = getattr(args, "file")
-    new_name_arg = getattr(args, "new_name")
+    batch_arg = getattr(args, "batch", None)
+    file_arg = getattr(args, "file", None)
+    new_name_arg = getattr(args, "new_name", None)
     skip_links = getattr(args, "skip_links", False)
     dry_run = getattr(args, "dry_run", False)
     prefix = "[DRY-RUN] " if dry_run else ""
+
+    if batch_arg:
+        try:
+            results = v.batch_rename(
+                mapping=batch_arg,
+                skip_links=skip_links,
+                dry_run=dry_run,
+            )
+        except (NamingError, VaultKeeperError) as exc:
+            logger.error("Batch rename rejected: %s", exc)
+            return EXIT_ERROR
+        except Exception as exc:
+            logger.error("Unexpected error during batch rename: %s", exc)
+            return EXIT_ERROR
+
+        total_links = 0
+        for res in results:
+            if res.old_path == res.new_path:
+                logger.info("%sUnchanged: %s", prefix, res.old_path.name)
+            else:
+                logger.info(
+                    "%sRenamed: %s -> %s (links updated: %d)",
+                    prefix,
+                    res.old_path.name,
+                    res.new_path.name,
+                    res.updated_links_count,
+                )
+                total_links += res.updated_links_count
+
+        tx_id = results[0].tx_id if results and results[0].tx_id else None
+        tx_info = f" (Tx: {tx_id})" if tx_id else ""
+        logger.info(
+            "%sBatch rename completed successfully: %d items renamed, %d links updated%s.",
+            prefix,
+            len(results),
+            total_links,
+            tx_info,
+        )
+        return EXIT_SUCCESS
+
+    if not file_arg or not new_name_arg:
+        logger.error("Missing arguments: specify both <file> and <new_name>, or use --batch <file.json>.")
+        return EXIT_ERROR
 
     try:
         res = v.rename(
