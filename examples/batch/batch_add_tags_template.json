@@ -1,0 +1,13 @@
+{
+  "10-19_Progetti/Progetto_Alpha.md": [
+    "area/sviluppo",
+    "stato/attivo"
+  ],
+  "20-29_Aree/Architettura_Server.md": [
+    "area/devops",
+    "tipo/infrastruttura"
+  ],
+  "00-09_Inbox/Idea_Startup.md": [
+    "area/business"
+  ]
+}
